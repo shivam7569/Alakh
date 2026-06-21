@@ -31,12 +31,7 @@ data class ExerciseMetrics(
     val elapsedMs: Long = 0L,
 )
 
-/** A completed session, suitable for history/summary display. */
-data class WorkoutSession(
-    val type: WorkoutType,
-    val startedAtEpochMs: Long,
-    val endedAtEpochMs: Long,
-    val avgHeartRateBpm: Int?,
-    val calories: Double?,
-    val distanceMeters: Double?,
-)
+// NOTE: the persisted/loggable session model now lives in SessionLog.kt (richer: per-exercise,
+// per-set weight/reps/RPE/set-type). The types ABOVE (WorkoutType, ExerciseStatus,
+// ExerciseMetrics) are the LIVE-session concepts the watch uses during an active workout
+// (Health Services state + live HR/calories), kept separate from the logged history model.

@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.andy.alakh.shared"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 34

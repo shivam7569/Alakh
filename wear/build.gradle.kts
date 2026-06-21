@@ -8,9 +8,9 @@ plugins {
 android {
     namespace = "com.andy.alakh"
 
-    // compileSdk 36 (Android 16). If Gradle sync says a dependency "requires compileSdk 37
+    // compileSdk 37. If Gradle sync says a dependency "requires compileSdk 37
     // or later", bump this and install that platform via Tools > SDK Manager. See README.
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         // SAME applicationId as the :mobile module so the watch & phone apps can pair

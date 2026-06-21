@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "com.andy.alakh.mobile"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         // SAME applicationId as :wear so the phone and watch apps pair over the Data Layer.
