@@ -1,0 +1,4 @@
+<resources>
+    <!-- Platform Material theme so the stub needs no AppCompat / Material dependency. -->
+    <style name="Theme.AlakhPhone" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>

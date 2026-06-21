@@ -1,0 +1,4 @@
+<resources>
+    <!-- Pre-Compose system theme (status bar / window background before setContent runs). -->
+    <style name="Theme.Alakh" parent="@android:style/Theme.DeviceDefault" />
+</resources>
