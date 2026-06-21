@@ -56,6 +56,10 @@ dependencies {
     implementation(libs.androidx.health.services)
     implementation(libs.play.services.wearable)
 
+    // Room (transitively required to access AlakhDatabase supertypes)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+
     // Core / lifecycle / activity
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
