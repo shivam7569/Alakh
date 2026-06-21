@@ -8,5 +8,6 @@
 /captures/
 .externalNativeBuild/
 .cxx/
+/.seedwork/
 *.keystore
 !debug.keystore

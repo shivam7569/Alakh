@@ -21,6 +21,7 @@ import androidx.wear.tooling.preview.devices.WearDevices
 fun HomeScreen(
     onWorkout: () -> Unit,
     onBreathing: () -> Unit,
+    onExercises: () -> Unit,
 ) {
     ScreenScaffold {
         Column(
@@ -34,6 +35,7 @@ fun HomeScreen(
             Text("Alakh")
             Button(onClick = onWorkout, modifier = Modifier.fillMaxWidth()) { Text("Workout") }
             Button(onClick = onBreathing, modifier = Modifier.fillMaxWidth()) { Text("Breathing") }
+            Button(onClick = onExercises, modifier = Modifier.fillMaxWidth()) { Text("Exercises") }
         }
     }
 }
@@ -41,5 +43,5 @@ fun HomeScreen(
 @Preview(device = WearDevices.LARGE_ROUND, showSystemUi = true)
 @Composable
 private fun HomeScreenPreview() {
-    HomeScreen(onWorkout = {}, onBreathing = {})
+    HomeScreen(onWorkout = {}, onBreathing = {}, onExercises = {})
 }
