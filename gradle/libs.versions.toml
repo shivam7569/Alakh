@@ -8,6 +8,7 @@
 # ============================================================================
 [versions]
 agp = "9.2.1"                  # AGP 9 provides built-in Kotlin, so there's no separate `kotlin` version to pin
+kotlin = "2.4.0"               # Should match the Kotlin version bundled with AGP 9
 ksp = "2.3.9"                  # must be 2.3.1+ for AGP 9; AGP bumps it to match its bundled Kotlin if lower
 composeBom = "2026.06.00"
 wearCompose = "1.6.2"          # foundation + navigation share this line
@@ -61,7 +62,7 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-# AGP 9 ships Kotlin built in. The compose-compiler plugin takes NO version so it
-# aligns with the Kotlin that AGP bundles; there is no separate kotlin-android plugin.
-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose" }
+# AGP 9 ships Kotlin built in. The compose-compiler plugin needs a version here
+# to be resolved, even if it's the one aligned with the Kotlin that AGP bundles.
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

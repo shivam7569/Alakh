@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
-    // Jetpack Compose compiler. No version — AGP 9's built-in Kotlin supplies it,
-    // aligned to the Kotlin version AGP bundles.
+    // Jetpack Compose compiler. We provide a version in the catalog that
+    // aligns with the Kotlin version bundled with AGP 9.
     alias(libs.plugins.kotlin.compose)
 }
 
