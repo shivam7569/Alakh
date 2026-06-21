@@ -1,21 +1,20 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    // Jetpack Compose compiler. No version — AGP 9's built-in Kotlin supplies it,
+    // aligned to the Kotlin version AGP bundles.
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.andy.alakh"
 
-    // compileSdk 36 (Android 16) is chosen as the most likely-installed stable platform.
-    // If Gradle sync says a dependency "requires compileSdk 37 or later", bump this to 37
-    // and install that platform via Tools > SDK Manager. See README "Step 2".
+    // compileSdk 36 (Android 16). If Gradle sync says a dependency "requires compileSdk 37
+    // or later", bump this and install that platform via Tools > SDK Manager. See README.
     compileSdk = 36
 
     defaultConfig {
-        // SAME applicationId as the :mobile module. Together with the shared debug keystore
-        // (~/.android/debug.keystore, used by default on this machine for both modules) this
-        // lets the watch and phone apps recognize each other over the Wear OS Data Layer later.
+        // SAME applicationId as the :mobile module so the watch & phone apps can pair
+        // over the Wear OS Data Layer later (they also share the default debug keystore).
         applicationId = "com.andy.alakh"
         minSdk = 34          // Wear OS 5.0 floor; Pixel Watch 3 runs 5.1 (API 35)
         targetSdk = 35
@@ -28,14 +27,10 @@ android {
     }
 
     compileOptions {
+        // With AGP 9 built-in Kotlin, the Kotlin jvmTarget defaults to targetCompatibility,
+        // so setting Java 17 here covers both Java and Kotlin — no separate kotlin {} block needed.
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
