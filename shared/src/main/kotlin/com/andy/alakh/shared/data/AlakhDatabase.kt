@@ -4,16 +4,26 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
 /**
- * On-device workout history. Not yet wired into the workout flow — persist a
- * WorkoutEntity from ExerciseService.stop() when you're ready to keep history,
- * and read observeAll() on a future history screen (or the phone app).
+ * The app's local database, shared by the watch and phone modules.
+ *
+ * Currently holds the exercise catalog; session/routine/breathing/readiness tables get added
+ * (with a version bump) when we build the logging UI. While the schema is still evolving we use
+ * fallbackToDestructiveMigration — if a table's shape changes, Room wipes and rebuilds the DB
+ * instead of crashing. That's fine now (no real data yet); before release we'll write proper
+ * migrations so history is preserved.
  */
-@Database(entities = [WorkoutEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [ExerciseEntity::class],
+    version = 1,
+    exportSchema = false,
+)
+@TypeConverters(Converters::class)
 abstract class AlakhDatabase : RoomDatabase() {
 
-    abstract fun workoutDao(): WorkoutDao
+    abstract fun exerciseDao(): ExerciseDao
 
     companion object {
         @Volatile private var instance: AlakhDatabase? = null
@@ -24,7 +34,10 @@ abstract class AlakhDatabase : RoomDatabase() {
                     context.applicationContext,
                     AlakhDatabase::class.java,
                     "alakh.db",
-                ).build().also { instance = it }
+                )
+                    .fallbackToDestructiveMigration(true)
+                    .build()
+                    .also { instance = it }
             }
     }
 }

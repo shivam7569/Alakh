@@ -23,6 +23,7 @@ enum class MuscleGroup(val displayName: String, val onRadar: Boolean = true) {
     HAMSTRINGS("Hamstrings"),
     GLUTES("Glutes"),
     CALVES("Calves"),
+    SHIN("Shins"),              // tibialis anterior (e.g. tib raises)
     // Catch-all for conditioning/cardio that doesn't map to one group; excluded from the radar.
     FULL_BODY("Full body", onRadar = false),
 }
