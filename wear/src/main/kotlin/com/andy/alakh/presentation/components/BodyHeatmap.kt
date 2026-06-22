@@ -30,8 +30,8 @@ import org.json.JSONObject
  * (see the muscle_map.json asset) and render the SVG paths here, tinted by what an exercise targets.
  */
 
-private val Primary = Color(0xFF34C796)    // bright: primary target
-private val Secondary = Color(0xFF1E6E59)  // dim: secondary target
+private val Primary = Color(0xFF22B8CF)    // bright: primary target (theme cyan)
+private val Secondary = Color(0xFF14606E)  // dim: secondary target
 private val BaseMuscle = Color(0xFF3A413D) // untargeted muscle
 private val Structure = Color(0xFF565F5B)  // head / hands / feet (neutral)
 

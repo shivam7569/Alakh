@@ -1,8 +1,5 @@
 package com.andy.alakh.presentation.exercises
 
-import android.app.RemoteInput
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,17 +12,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,17 +39,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import androidx.wear.input.RemoteInputIntentHelper
-import com.andy.alakh.presentation.theme.colorForGroup
+import com.andy.alakh.presentation.theme.AlakhAccent
 import com.andy.alakh.shared.data.ExerciseListItem
 import com.andy.alakh.shared.model.MuscleGroup
 
-private const val QUERY_KEY = "alakh_search_query"
-
 /**
- * The exercise catalog: a compact search icon (taps open the watch's full-screen voice/keyboard
- * input — no clipping at the round edge), then exercises grouped into muscle-group sections, each
- * painted with its group color. Typing filters by name, category, OR muscle group.
+ * The exercise catalog: a search icon that expands into an in-app search field (no system/emoji
+ * input; kept narrow + centered so it clears the round edge), then exercises grouped into
+ * muscle-group sections. Typing filters by name, category, or PRIMARY muscle group.
  */
 @Composable
 fun ExercisesScreen(onSelect: ((ExerciseListItem) -> Unit)? = null) {
@@ -52,15 +54,10 @@ fun ExercisesScreen(onSelect: ((ExerciseListItem) -> Unit)? = null) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val text = RemoteInput.getResultsFromIntent(result.data)?.getCharSequence(QUERY_KEY)?.toString()
-        if (text != null) viewModel.setQuery(text)
-    }
-    val openSearch: () -> Unit = {
-        val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
-        val inputs = listOf(RemoteInput.Builder(QUERY_KEY).setLabel("Search exercises").build())
-        RemoteInputIntentHelper.putRemoteInputsExtra(intent, inputs)
-        launcher.launch(intent)
+    var searching by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(searching) {
+        if (searching) runCatching { focusRequester.requestFocus() }
     }
 
     ScreenScaffold {
@@ -70,7 +67,16 @@ fun ExercisesScreen(onSelect: ((ExerciseListItem) -> Unit)? = null) {
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             item(key = "search", contentType = "search") {
-                SearchControl(query = query, onOpen = openSearch, onClear = { viewModel.setQuery("") })
+                if (searching) {
+                    SearchField(
+                        query = query,
+                        onQueryChange = viewModel::setQuery,
+                        focusRequester = focusRequester,
+                        onClose = { searching = false; viewModel.setQuery("") },
+                    )
+                } else {
+                    SearchIcon(onClick = { searching = true })
+                }
             }
             items(
                 items = entries,
@@ -101,41 +107,52 @@ fun ExercisesScreen(onSelect: ((ExerciseListItem) -> Unit)? = null) {
 }
 
 @Composable
-private fun SearchControl(query: String, onOpen: () -> Unit, onClear: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+private fun SearchIcon(onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(Color(0x1FFFFFFF))
+                .clickable { onClick() }
+                .padding(10.dp),
+            contentAlignment = Alignment.Center,
+        ) { Text("🔍", fontSize = 16.sp) }
+    }
+}
+
+@Composable
+private fun SearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    onClose: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         Row(
             modifier = Modifier
+                .fillMaxWidth(0.82f)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0x1FFFFFFF))
-                .clickable { onOpen() }
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .background(Color(0x26FFFFFF))
+                .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("🔍", fontSize = 15.sp)
-            if (query.isNotBlank()) {
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    query,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 110.dp),
+            Text("🔍", fontSize = 13.sp)
+            Spacer(Modifier.width(6.dp))
+            Box(Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    Text("Search", color = Color(0xFF9AA3A0), fontSize = 14.sp)
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                    cursorBrush = SolidColor(AlakhAccent),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                 )
             }
-        }
-        if (query.isNotBlank()) {
-            Spacer(Modifier.width(6.dp))
             Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(Color(0x26FFFFFF))
-                    .clickable { onClear() }
-                    .padding(7.dp),
+                modifier = Modifier.clip(CircleShape).clickable { onClose() }.padding(5.dp),
                 contentAlignment = Alignment.Center,
             ) { Text("✕", fontSize = 12.sp, color = Color.White) }
         }
@@ -148,13 +165,12 @@ private fun SectionHeader(group: MuscleGroup) {
         text = group.displayName.uppercase(),
         modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 12.dp, bottom = 2.dp),
         style = MaterialTheme.typography.titleSmall,
-        color = colorForGroup(group),
+        color = AlakhAccent,
     )
 }
 
 @Composable
 private fun ExerciseRow(item: ExerciseListItem, onClick: () -> Unit) {
-    val color = colorForGroup(item.primaryMuscles.firstOrNull())
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -167,7 +183,7 @@ private fun ExerciseRow(item: ExerciseListItem, onClick: () -> Unit) {
         Text(
             item.primaryMuscles.joinToString(", ") { it.displayName },
             style = MaterialTheme.typography.bodySmall,
-            color = color,
+            color = AlakhAccent,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

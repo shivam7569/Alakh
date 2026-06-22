@@ -69,7 +69,7 @@ fun BreathingScreen() {
                 modifier = Modifier
                     .size(80.dp)
                     .scale(scale.value)
-                    .background(Color(0xFF34C796), CircleShape),
+                    .background(Color(0xFF22B8CF), CircleShape),
             )
             Button(onClick = { running = !running }) {
                 Text(if (running) "Stop" else "Start")

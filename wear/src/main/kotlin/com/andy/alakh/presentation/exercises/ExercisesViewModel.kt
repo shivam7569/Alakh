@@ -63,11 +63,13 @@ private fun buildEntries(list: List<ExerciseListItem>, query: String): List<Cata
     return entries
 }
 
-/** Match by exercise name, category, OR muscle group — so "back" lists all back exercises. */
+/**
+ * Match by exercise name, category, OR PRIMARY muscle group — so "back" lists back exercises.
+ * Secondary muscles are deliberately excluded: back/core are secondary in a huge share of
+ * exercises, which made "back" match shoulders, quads, and everything else.
+ */
 private fun matches(item: ExerciseListItem, q: String): Boolean {
     if (item.name.contains(q, ignoreCase = true)) return true
     if (item.category.name.contains(q, ignoreCase = true)) return true
-    return (item.primaryMuscles + item.secondaryMuscles).any {
-        it.displayName.contains(q, ignoreCase = true) || it.name.contains(q, ignoreCase = true)
-    }
+    return item.primaryMuscles.any { it.displayName.contains(q, ignoreCase = true) }
 }

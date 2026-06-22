@@ -20,7 +20,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-private val Accent = Color(0xFF34C796)
+private val Accent = Color(0xFF22B8CF)
 
 /** Circular accent confirm button with a drawn checkmark + haptic — a tap-to-tick action. */
 @Composable

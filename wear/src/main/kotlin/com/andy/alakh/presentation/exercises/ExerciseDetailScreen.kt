@@ -25,7 +25,7 @@ object ExerciseDetailHolder {
     var item: ExerciseListItem? = null
 }
 
-private val Accent = Color(0xFF34C796)
+private val Accent = Color(0xFF22B8CF)
 
 /** Read-only exercise view: name, the muscle heatmap, and the muscle breakdown. */
 @Composable
