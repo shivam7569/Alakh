@@ -127,13 +127,13 @@ private fun DrawScope.drawView(
     val bw = view.bounds.width
     val bh = view.bounds.height
     if (bw <= 0f || bh <= 0f) return
-    val scale = minOf(box.width / bw, box.height / bh)
-    val tx = box.left + (box.width - bw * scale) / 2f - view.bounds.left * scale
-    val ty = box.top + (box.height - bh * scale) / 2f - view.bounds.top * scale
+    val s = minOf(box.width / bw, box.height / bh)
+    val tx = box.left + (box.width - bw * s) / 2f - view.bounds.left * s
+    val ty = box.top + (box.height - bh * s) / 2f - view.bounds.top * s
 
     withTransform({
         translate(tx, ty)
-        scale(scale, scale, pivot = Offset.Zero)
+        scale(s, s, pivot = Offset.Zero)
     }) {
         for (reg in view.regions) {
             val color = when {
