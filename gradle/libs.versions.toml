@@ -78,4 +78,6 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 # AGP 9 ships Kotlin built in. The compose-compiler plugin needs a version here
 # to be resolved, even if it's the one aligned with the Kotlin that AGP bundles.
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# Pure-JVM Kotlin plugin for the :core module (non-Android, so it needs an explicit Kotlin version).
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

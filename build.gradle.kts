@@ -7,4 +7,5 @@ plugins {
     // AGP 9 has built-in Kotlin, but the Compose compiler plugin must be declared
     // with a version (at least here or in the catalog) to be resolved from repositories.
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
 }

@@ -19,6 +19,10 @@ android {
 }
 
 dependencies {
+    // Pure-Kotlin domain model + rules live in :core. `api` re-exports them so the
+    // Room/data code here and consumers like :wear keep seeing the same package unchanged.
+    api(project(":core"))
+
     implementation(libs.androidx.core.ktx)
 
     // Room (on-device history). Processor runs via KSP.

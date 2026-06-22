@@ -26,25 +26,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK packages
-        run: |
-          # API 37 (Android 17) is a preview platform and the runner's bundled cmdline-tools are too
-          # old to parse the current repo (XML v4). Install fresh cmdline-tools, then use the
-          # newest sdkmanager (it lands in latest-2 since latest already exists) from the canary channel.
-          sdkmanager "cmdline-tools;latest" > /dev/null 2>&1 || true
-          SDKM=$(ls -dt "$ANDROID_SDK_ROOT"/cmdline-tools/*/bin/sdkmanager | head -1)
-          echo "Using $SDKM"
-          yes | "$SDKM" --channel=3 --licenses > /dev/null 2>&1 || true
-          "$SDKM" --channel=3 "platforms;android-37" "build-tools;37.0.0"
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # The app modules use compileSdk 37 (an Android 17 preview platform not published to the
+      # public SDK repo), so they can't be built on CI runners. The testable business logic lives
+      # in the pure-JVM :core module instead. --configure-on-demand makes Gradle evaluate ONLY
+      # :core, so the Android modules are never configured and no Android SDK is required.
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace --console=plain
+        run: ./gradlew :core:test --configure-on-demand --stacktrace --console=plain
 
       - name: Upload test reports
         if: ${{ always() }}

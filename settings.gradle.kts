@@ -18,3 +18,4 @@ rootProject.name = "Alakh"
 include(":wear")
 include(":mobile")
 include(":shared")
+include(":core")
