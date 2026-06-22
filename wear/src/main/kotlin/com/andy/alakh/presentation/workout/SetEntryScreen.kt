@@ -27,6 +27,7 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.andy.alakh.presentation.components.BodyHeatmap
+import com.andy.alakh.presentation.components.TickButton
 import com.andy.alakh.shared.model.SetType
 
 /**
@@ -101,13 +102,13 @@ fun SetEntryScreen(onLogged: () -> Unit) {
             Button(onClick = { setType = nextType(setType) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Type: ${labelOf(setType)}")
             }
-            Button(
+            TickButton(
                 onClick = {
                     if (index >= 0) ActiveWorkout.logSet(index, DraftSet(setType, weight, reps, rpe))
                     onLogged()
                 },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Log set") }
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }
