@@ -4,16 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.wear.compose.material3.MaterialTheme
 
 /**
- * App theme. Overrides the Material primary so Buttons and other accented components pick up the
- * Alakh cyan automatically across the app.
+ * App theme. We keep the default Material color scheme (so component backgrounds stay as-is); the
+ * Alakh accent is applied only as a font/highlight color where we use it explicitly.
  */
 @Composable
 fun AlakhTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = MaterialTheme.colorScheme.copy(
-            primary = AlakhAccent,
-            onPrimary = AlakhOnAccent,
-        ),
-        content = content,
-    )
+    MaterialTheme(content = content)
 }

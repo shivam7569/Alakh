@@ -13,13 +13,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/** A row in the catalog list: either a muscle-group section header or an exercise. */
-sealed interface CatalogEntry {
-    data class Header(val group: MuscleGroup) : CatalogEntry
-    data class Item(val exercise: ExerciseListItem) : CatalogEntry
-}
+/** A collapsible muscle-group section: its group + the exercises in it. */
+data class GroupSection(val group: MuscleGroup, val items: List<ExerciseListItem>)
 
 private val GROUP_ORDER = listOf(
     MuscleGroup.CHEST, MuscleGroup.BACK, MuscleGroup.SHOULDERS, MuscleGroup.TRAPS,
@@ -36,37 +34,34 @@ class ExercisesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setQuery(value: String) { _query.value = value }
 
-    /** Grouped sections when idle; flat filtered results when searching. Built off the main thread. */
-    val entries: StateFlow<List<CatalogEntry>> =
-        combine(catalog, _query) { list, q -> buildEntries(list, q) }
+    /** Muscle-group sections (for the collapsible browse view). Built off the main thread. */
+    val sections: StateFlow<List<GroupSection>> =
+        catalog.map { groupIntoSections(it) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Flat search results (empty when the query is blank). Built off the main thread. */
+    val searchResults: StateFlow<List<ExerciseListItem>> =
+        combine(catalog, _query) { list, raw ->
+            val q = raw.trim()
+            if (q.isEmpty()) emptyList()
+            else list.asSequence().filter { matches(it, q) }.sortedBy { it.name }.toList()
+        }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
 
-private fun buildEntries(list: List<ExerciseListItem>, query: String): List<CatalogEntry> {
-    val q = query.trim()
-    if (q.isNotEmpty()) {
-        return list.asSequence()
-            .filter { matches(it, q) }
-            .sortedBy { it.name }
-            .map { CatalogEntry.Item(it) }
-            .toList()
-    }
+private fun groupIntoSections(list: List<ExerciseListItem>): List<GroupSection> {
     val byGroup = list.groupBy { it.primaryMuscles.firstOrNull() ?: MuscleGroup.FULL_BODY }
-    val entries = ArrayList<CatalogEntry>(list.size + GROUP_ORDER.size)
-    for (group in GROUP_ORDER) {
-        val items = byGroup[group]?.sortedBy { it.name } ?: continue
-        if (items.isEmpty()) continue
-        entries.add(CatalogEntry.Header(group))
-        items.forEach { entries.add(CatalogEntry.Item(it)) }
+    return GROUP_ORDER.mapNotNull { group ->
+        val items = byGroup[group]?.takeIf { it.isNotEmpty() }?.sortedBy { it.name }
+        items?.let { GroupSection(group, it) }
     }
-    return entries
 }
 
 /**
- * Match by exercise name, category, OR PRIMARY muscle group — so "back" lists back exercises.
- * Secondary muscles are deliberately excluded: back/core are secondary in a huge share of
- * exercises, which made "back" match shoulders, quads, and everything else.
+ * Match by name, category, OR PRIMARY muscle group. Secondary muscles are excluded: back/core are
+ * secondary in a huge share of exercises, which made "back" match almost everything.
  */
 private fun matches(item: ExerciseListItem, q: String): Boolean {
     if (item.name.contains(q, ignoreCase = true)) return true

@@ -44,21 +44,21 @@ import com.andy.alakh.shared.data.ExerciseListItem
 import com.andy.alakh.shared.model.MuscleGroup
 
 /**
- * The exercise catalog: a search icon that expands into an in-app search field (no system/emoji
- * input; kept narrow + centered so it clears the round edge), then exercises grouped into
- * muscle-group sections. Typing filters by name, category, or PRIMARY muscle group.
+ * Catalog browsing. By default it's a short list of tappable muscle-group headers (collapsed) — tap
+ * one to expand its exercises (single-open accordion), so you're never scrolling all 800+ at once.
+ * The search icon expands an in-app field that filters to flat results by name/category/muscle.
  */
 @Composable
 fun ExercisesScreen(onSelect: ((ExerciseListItem) -> Unit)? = null) {
     val viewModel: ExercisesViewModel = viewModel()
-    val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val sections by viewModel.sections.collectAsStateWithLifecycle()
+    val results by viewModel.searchResults.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
 
     var searching by remember { mutableStateOf(false) }
+    var expandedGroup by remember { mutableStateOf<MuscleGroup?>(null) }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(searching) {
-        if (searching) runCatching { focusRequester.requestFocus() }
-    }
+    LaunchedEffect(searching) { if (searching) runCatching { focusRequester.requestFocus() } }
 
     ScreenScaffold {
         LazyColumn(
@@ -78,31 +78,81 @@ fun ExercisesScreen(onSelect: ((ExerciseListItem) -> Unit)? = null) {
                     SearchIcon(onClick = { searching = true })
                 }
             }
-            items(
-                items = entries,
-                key = { entry ->
-                    when (entry) {
-                        is CatalogEntry.Header -> "h:${entry.group.name}"
-                        is CatalogEntry.Item -> entry.exercise.id
-                    }
-                },
-                contentType = { it is CatalogEntry.Header },
-            ) { entry ->
-                when (entry) {
-                    is CatalogEntry.Header -> SectionHeader(entry.group)
-                    is CatalogEntry.Item -> ExerciseRow(entry.exercise) { onSelect?.invoke(entry.exercise) }
+
+            if (query.isNotBlank()) {
+                items(results, key = { it.id }, contentType = { "item" }) { item ->
+                    ExerciseRow(item) { onSelect?.invoke(item) }
                 }
-            }
-            if (entries.isEmpty()) {
-                item {
-                    Text(
-                        if (query.isBlank()) "Loading catalog…" else "No matches for \"$query\"",
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                if (results.isEmpty()) {
+                    item { EmptyNote("No matches for \"$query\"") }
+                }
+            } else {
+                sections.forEach { section ->
+                    item(key = "h:${section.group.name}", contentType = "header") {
+                        SectionHeader(
+                            group = section.group,
+                            count = section.items.size,
+                            expanded = expandedGroup == section.group,
+                            onClick = {
+                                expandedGroup = if (expandedGroup == section.group) null else section.group
+                            },
+                        )
+                    }
+                    if (expandedGroup == section.group) {
+                        items(section.items, key = { it.id }, contentType = { "item" }) { item ->
+                            ExerciseRow(item) { onSelect?.invoke(item) }
+                        }
+                    }
+                }
+                if (sections.isEmpty()) {
+                    item { EmptyNote("Loading catalog…") }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SectionHeader(group: MuscleGroup, count: Int, expanded: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .background(Color(0x14FFFFFF))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = group.displayName.uppercase(),
+            style = MaterialTheme.typography.titleSmall,
+            color = AlakhAccent,
+            modifier = Modifier.weight(1f),
+        )
+        Text("$count", color = Color(0xFF9AA3A0), fontSize = 12.sp)
+        Spacer(Modifier.width(6.dp))
+        Text(if (expanded) "▾" else "▸", color = AlakhAccent, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun ExerciseRow(item: ExerciseListItem, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .clickable { onClick() }
+            .background(Color(0x14FFFFFF))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(item.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            item.primaryMuscles.joinToString(", ") { it.displayName },
+            style = MaterialTheme.typography.bodySmall,
+            color = AlakhAccent,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -160,32 +210,11 @@ private fun SearchField(
 }
 
 @Composable
-private fun SectionHeader(group: MuscleGroup) {
+private fun EmptyNote(text: String) {
     Text(
-        text = group.displayName.uppercase(),
-        modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 12.dp, bottom = 2.dp),
-        style = MaterialTheme.typography.titleSmall,
-        color = AlakhAccent,
+        text,
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = Color(0xFF9AA3A0),
     )
-}
-
-@Composable
-private fun ExerciseRow(item: ExerciseListItem, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .clickable { onClick() }
-            .background(Color(0x14FFFFFF))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(item.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(
-            item.primaryMuscles.joinToString(", ") { it.displayName },
-            style = MaterialTheme.typography.bodySmall,
-            color = AlakhAccent,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
 }

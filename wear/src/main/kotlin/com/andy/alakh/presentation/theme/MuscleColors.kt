@@ -4,12 +4,11 @@ import androidx.compose.ui.graphics.Color
 import com.andy.alakh.shared.model.MuscleGroup
 
 /**
- * The app's theme accent — the "quads" cyan the user chose from the color experiment.
- * Used for highlights, the tick button, headers, the breathing circle, and Material primary.
+ * The app's theme accent — the original green (the user preferred it over the cyan experiment).
+ * Applied as a FONT / highlight color only (headers, row text, heatmap, tick, breathing) — NOT to
+ * component backgrounds (we deliberately don't override Material primary).
  */
-val AlakhAccent = Color(0xFF22B8CF)
-val AlakhAccentDim = Color(0xFF14606E)
-val AlakhOnAccent = Color(0xFF052830)
+val AlakhAccent = Color(0xFF34C796)
 
 /**
  * Per-muscle-group palette (from the color experiment). No longer used to color the catalog list
