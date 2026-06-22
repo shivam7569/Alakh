@@ -5,7 +5,10 @@ import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
-import com.andy.alakh.presentation.breathing.BreathingScreen
+import com.andy.alakh.presentation.breathing.BreathingCatalogScreen
+import com.andy.alakh.presentation.breathing.BreathingDetailScreen
+import com.andy.alakh.presentation.breathing.BreathingNav
+import com.andy.alakh.presentation.breathing.BreathingRunScreen
 import com.andy.alakh.presentation.exercises.CatalogNav
 import com.andy.alakh.presentation.exercises.ExerciseDetailHolder
 import com.andy.alakh.presentation.exercises.ExerciseDetailScreen
@@ -18,11 +21,14 @@ import com.andy.alakh.presentation.workout.SetEntryScreen
 import com.andy.alakh.presentation.workout.WorkoutScreen
 import com.andy.alakh.shared.data.ExerciseListItem
 import com.andy.alakh.shared.model.MuscleGroup
+import com.andy.alakh.shared.rules.BreathingCatalog
 
 /** Navigation route keys. */
 object Routes {
     const val HOME = "home"
-    const val BREATHING = "breathing"
+    const val BREATHING_CATALOG = "breathing_catalog"
+    const val BREATHING_DETAIL = "breathing_detail"
+    const val BREATHING_RUN = "breathing_run"
     const val WORKOUT = "workout"
     const val WORKOUT_PICK = "workout_pick"
     const val SET_ENTRY = "set_entry"
@@ -44,11 +50,27 @@ fun AlakhApp() {
                 composable(Routes.HOME) {
                     HomeScreen(
                         onWorkout = { navController.navigate(Routes.WORKOUT) },
-                        onBreathing = { navController.navigate(Routes.BREATHING) },
+                        onBreathing = { navController.navigate(Routes.BREATHING_CATALOG) },
                         onExercises = { navController.navigate(Routes.EXERCISES) },
                     )
                 }
-                composable(Routes.BREATHING) { BreathingScreen() }
+                composable(Routes.BREATHING_CATALOG) {
+                    BreathingCatalogScreen(onSelect = { technique ->
+                        BreathingNav.selected = technique
+                        navController.navigate(Routes.BREATHING_DETAIL)
+                    })
+                }
+                composable(Routes.BREATHING_DETAIL) {
+                    val technique = BreathingNav.selected ?: BreathingCatalog.all.first()
+                    BreathingDetailScreen(
+                        technique = technique,
+                        onStart = { navController.navigate(Routes.BREATHING_RUN) },
+                    )
+                }
+                composable(Routes.BREATHING_RUN) {
+                    val technique = BreathingNav.selected ?: BreathingCatalog.all.first()
+                    BreathingRunScreen(technique = technique, onExit = { navController.popBackStack() })
+                }
                 composable(Routes.EXERCISES) {
                     ExercisesScreen(
                         onOpenGroup = { g ->
