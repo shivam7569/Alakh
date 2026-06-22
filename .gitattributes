@@ -1,0 +1,14 @@
+# Default: normalize text to LF in the repo
+* text=auto eol=lf
+
+# Windows scripts must stay CRLF
+*.bat text eol=crlf
+
+# The Gradle wrapper script must be LF (it runs on the Linux CI runner)
+gradlew text eol=lf
+
+# Binaries — never touch line endings
+*.jar binary
+*.png binary
+*.jpg binary
+*.keystore binary
