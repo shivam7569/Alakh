@@ -54,7 +54,7 @@ fun SetEntryScreen(onLogged: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 28.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 30.dp, bottom = 46.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

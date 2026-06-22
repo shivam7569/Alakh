@@ -31,6 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,100 +44,83 @@ import com.andy.alakh.presentation.theme.AlakhAccent
 import com.andy.alakh.shared.data.ExerciseListItem
 import com.andy.alakh.shared.model.MuscleGroup
 
+/** Generous top/bottom padding so the round screen never clips the first/last row. */
+internal val CatalogPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 30.dp, bottom = 48.dp)
+
 /**
- * Catalog browsing. By default it's a short list of tappable muscle-group headers (collapsed) — tap
- * one to expand its exercises (single-open accordion), so you're never scrolling all 800+ at once.
- * The search icon expands an in-app field that filters to flat results by name/category/muscle.
+ * Top level of the catalog: pick a muscle group (its own short page), or search across everything.
+ * Selecting a group opens [onOpenGroup]; a search result opens [onSelectExercise].
  */
 @Composable
-fun ExercisesScreen(onSelect: ((ExerciseListItem) -> Unit)? = null) {
+fun ExercisesScreen(
+    onOpenGroup: (MuscleGroup) -> Unit,
+    onSelectExercise: (ExerciseListItem) -> Unit,
+) {
     val viewModel: ExercisesViewModel = viewModel()
     val sections by viewModel.sections.collectAsStateWithLifecycle()
     val results by viewModel.searchResults.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
 
-    var searching by remember { mutableStateOf(false) }
-    var expandedGroup by remember { mutableStateOf<MuscleGroup?>(null) }
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(searching) { if (searching) runCatching { focusRequester.requestFocus() } }
-
     ScreenScaffold {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            contentPadding = CatalogPadding,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             item(key = "search", contentType = "search") {
-                if (searching) {
-                    SearchField(
-                        query = query,
-                        onQueryChange = viewModel::setQuery,
-                        focusRequester = focusRequester,
-                        onClose = { searching = false; viewModel.setQuery("") },
-                    )
-                } else {
-                    SearchIcon(onClick = { searching = true })
-                }
+                ExpandingSearch(query = query, onQueryChange = viewModel::setQuery)
             }
-
             if (query.isNotBlank()) {
                 items(results, key = { it.id }, contentType = { "item" }) { item ->
-                    ExerciseRow(item) { onSelect?.invoke(item) }
+                    ExerciseRow(item) { onSelectExercise(item) }
                 }
-                if (results.isEmpty()) {
-                    item { EmptyNote("No matches for \"$query\"") }
-                }
+                if (results.isEmpty()) item { EmptyNote("No matches for \"$query\"") }
             } else {
-                sections.forEach { section ->
-                    item(key = "h:${section.group.name}", contentType = "header") {
-                        SectionHeader(
-                            group = section.group,
-                            count = section.items.size,
-                            expanded = expandedGroup == section.group,
-                            onClick = {
-                                expandedGroup = if (expandedGroup == section.group) null else section.group
-                            },
-                        )
-                    }
-                    if (expandedGroup == section.group) {
-                        items(section.items, key = { it.id }, contentType = { "item" }) { item ->
-                            ExerciseRow(item) { onSelect?.invoke(item) }
-                        }
-                    }
+                item(key = "title", contentType = "title") {
+                    Text(
+                        "MUSCLE GROUPS",
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF9AA3A0),
+                    )
                 }
-                if (sections.isEmpty()) {
-                    item { EmptyNote("Loading catalog…") }
+                items(sections, key = { it.group.name }, contentType = { "group" }) { section ->
+                    GroupCard(section.group, section.items.size) { onOpenGroup(section.group) }
                 }
+                if (sections.isEmpty()) item { EmptyNote("Loading catalog…") }
             }
         }
     }
 }
 
 @Composable
-private fun SectionHeader(group: MuscleGroup, count: Int, expanded: Boolean, onClick: () -> Unit) {
+private fun GroupCard(group: MuscleGroup, count: Int, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
             .clickable { onClick() }
             .background(Color(0x14FFFFFF))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = group.displayName.uppercase(),
+            group.displayName,
             style = MaterialTheme.typography.titleSmall,
             color = AlakhAccent,
             modifier = Modifier.weight(1f),
         )
         Text("$count", color = Color(0xFF9AA3A0), fontSize = 12.sp)
-        Spacer(Modifier.width(6.dp))
-        Text(if (expanded) "▾" else "▸", color = AlakhAccent, fontSize = 13.sp)
+        Spacer(Modifier.width(8.dp))
+        Text("›", color = AlakhAccent, fontSize = 18.sp)
     }
 }
 
+// --- shared catalog UI (used by ExercisesScreen and MuscleExercisesScreen) ---
+
 @Composable
-private fun ExerciseRow(item: ExerciseListItem, onClick: () -> Unit) {
+fun ExerciseRow(item: ExerciseListItem, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -157,14 +141,34 @@ private fun ExerciseRow(item: ExerciseListItem, onClick: () -> Unit) {
 }
 
 @Composable
+fun EmptyNote(text: String) {
+    Text(
+        text,
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        textAlign = TextAlign.Center,
+        style = MaterialTheme.typography.bodySmall,
+        color = Color(0xFF9AA3A0),
+    )
+}
+
+@Composable
+fun ExpandingSearch(query: String, onQueryChange: (String) -> Unit) {
+    var searching by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(searching) { if (searching) runCatching { focusRequester.requestFocus() } }
+
+    if (searching) {
+        SearchField(query, onQueryChange, focusRequester) { searching = false; onQueryChange("") }
+    } else {
+        SearchIcon { searching = true }
+    }
+}
+
+@Composable
 private fun SearchIcon(onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(Color(0x1FFFFFFF))
-                .clickable { onClick() }
-                .padding(10.dp),
+            modifier = Modifier.clip(CircleShape).background(Color(0x1FFFFFFF)).clickable { onClick() }.padding(10.dp),
             contentAlignment = Alignment.Center,
         ) { Text("🔍", fontSize = 16.sp) }
     }
@@ -189,9 +193,7 @@ private fun SearchField(
             Text("🔍", fontSize = 13.sp)
             Spacer(Modifier.width(6.dp))
             Box(Modifier.weight(1f)) {
-                if (query.isEmpty()) {
-                    Text("Search", color = Color(0xFF9AA3A0), fontSize = 14.sp)
-                }
+                if (query.isEmpty()) Text("Search", color = Color(0xFF9AA3A0), fontSize = 14.sp)
                 BasicTextField(
                     value = query,
                     onValueChange = onQueryChange,
@@ -207,14 +209,4 @@ private fun SearchField(
             ) { Text("✕", fontSize = 12.sp, color = Color.White) }
         }
     }
-}
-
-@Composable
-private fun EmptyNote(text: String) {
-    Text(
-        text,
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = Color(0xFF9AA3A0),
-    )
 }

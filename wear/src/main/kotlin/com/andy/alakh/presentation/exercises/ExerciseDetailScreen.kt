@@ -37,7 +37,7 @@ fun ExerciseDetailScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp, vertical = 28.dp),
+                .padding(start = 14.dp, end = 14.dp, top = 30.dp, bottom = 46.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {

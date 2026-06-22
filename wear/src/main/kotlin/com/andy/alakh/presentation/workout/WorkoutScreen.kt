@@ -54,7 +54,7 @@ fun WorkoutScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 28.dp),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 30.dp, bottom = 46.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 item {
