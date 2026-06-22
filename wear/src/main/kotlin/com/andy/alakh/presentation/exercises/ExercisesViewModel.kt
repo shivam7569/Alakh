@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.stateIn
 
 /** A row in the catalog list: either a muscle-group section header or an exercise. */
 sealed interface CatalogEntry {
-    data class Header(val title: String) : CatalogEntry
+    data class Header(val group: MuscleGroup) : CatalogEntry
     data class Item(val exercise: ExerciseListItem) : CatalogEntry
 }
 
@@ -36,7 +36,7 @@ class ExercisesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setQuery(value: String) { _query.value = value }
 
-    /** Grouped sections when idle, flat filtered results when searching. Built off the main thread. */
+    /** Grouped sections when idle; flat filtered results when searching. Built off the main thread. */
     val entries: StateFlow<List<CatalogEntry>> =
         combine(catalog, _query) { list, q -> buildEntries(list, q) }
             .flowOn(Dispatchers.Default)
@@ -47,7 +47,7 @@ private fun buildEntries(list: List<ExerciseListItem>, query: String): List<Cata
     val q = query.trim()
     if (q.isNotEmpty()) {
         return list.asSequence()
-            .filter { it.name.contains(q, ignoreCase = true) }
+            .filter { matches(it, q) }
             .sortedBy { it.name }
             .map { CatalogEntry.Item(it) }
             .toList()
@@ -57,8 +57,17 @@ private fun buildEntries(list: List<ExerciseListItem>, query: String): List<Cata
     for (group in GROUP_ORDER) {
         val items = byGroup[group]?.sortedBy { it.name } ?: continue
         if (items.isEmpty()) continue
-        entries.add(CatalogEntry.Header(group.displayName))
+        entries.add(CatalogEntry.Header(group))
         items.forEach { entries.add(CatalogEntry.Item(it)) }
     }
     return entries
+}
+
+/** Match by exercise name, category, OR muscle group — so "back" lists all back exercises. */
+private fun matches(item: ExerciseListItem, q: String): Boolean {
+    if (item.name.contains(q, ignoreCase = true)) return true
+    if (item.category.name.contains(q, ignoreCase = true)) return true
+    return (item.primaryMuscles + item.secondaryMuscles).any {
+        it.displayName.contains(q, ignoreCase = true) || it.name.contains(q, ignoreCase = true)
+    }
 }

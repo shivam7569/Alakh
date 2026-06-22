@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.androidx.wear)
     implementation(libs.androidx.wear.tooling.preview)
     implementation(libs.androidx.wear.ongoing)
+    implementation(libs.androidx.wear.input)
 
     // Health Services (workout sensors) + Data Layer (future phone pairing)
     implementation(libs.androidx.health.services)
