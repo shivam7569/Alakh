@@ -31,11 +31,13 @@ jobs:
 
       - name: Install SDK packages
         run: |
-          # API 37 (Android 17) is a preview platform; the runner's bundled sdkmanager is too old
-          # to know it, so update cmdline-tools first, then fetch from the canary channel (3).
-          sdkmanager "cmdline-tools;latest" > /dev/null
-          SDKM="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKM" --channel=3 --licenses > /dev/null || true
+          # API 37 (Android 17) is a preview platform and the runner's bundled cmdline-tools are too
+          # old to parse the current repo (XML v4). Install fresh cmdline-tools, then use the
+          # newest sdkmanager (it lands in latest-2 since latest already exists) from the canary channel.
+          sdkmanager "cmdline-tools;latest" > /dev/null 2>&1 || true
+          SDKM=$(ls -dt "$ANDROID_SDK_ROOT"/cmdline-tools/*/bin/sdkmanager | head -1)
+          echo "Using $SDKM"
+          yes | "$SDKM" --channel=3 --licenses > /dev/null 2>&1 || true
           "$SDKM" --channel=3 "platforms;android-37" "build-tools;37.0.0"
 
       - name: Set up Gradle
