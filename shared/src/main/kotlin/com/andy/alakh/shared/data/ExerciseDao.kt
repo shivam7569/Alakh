@@ -23,7 +23,7 @@ interface ExerciseDao {
     fun observeAll(): Flow<List<ExerciseEntity>>
 
     /** Lightweight projection for lists/pickers — skips heavy columns (instructions, etc.). */
-    @Query("SELECT id, name, category, primaryMuscles, secondaryMuscles FROM exercises ORDER BY name")
+    @Query("SELECT id, name, category, primaryMuscles, secondaryMuscles, usageCount FROM exercises ORDER BY usageCount DESC, name")
     fun observeListItems(): Flow<List<ExerciseListItem>>
 
     @Query("SELECT * FROM exercises WHERE name LIKE '%' || :query || '%' ORDER BY name")

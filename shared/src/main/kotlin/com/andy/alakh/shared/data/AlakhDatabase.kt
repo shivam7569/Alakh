@@ -16,14 +16,20 @@ import androidx.room.TypeConverters
  * migrations so history is preserved.
  */
 @Database(
-    entities = [ExerciseEntity::class],
-    version = 1,
+    entities = [
+        ExerciseEntity::class,
+        WorkoutSessionEntity::class,
+        PerformedExerciseEntity::class,
+        LoggedSetEntity::class,
+    ],
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
 abstract class AlakhDatabase : RoomDatabase() {
 
     abstract fun exerciseDao(): ExerciseDao
+    abstract fun workoutDao(): WorkoutDao
 
     companion object {
         @Volatile private var instance: AlakhDatabase? = null

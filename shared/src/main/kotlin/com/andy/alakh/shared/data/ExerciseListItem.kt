@@ -14,4 +14,5 @@ data class ExerciseListItem(
     val category: ExerciseCategory,
     val primaryMuscles: List<MuscleGroup>,
     val secondaryMuscles: List<MuscleGroup>,
+    val usageCount: Int = 0,
 )

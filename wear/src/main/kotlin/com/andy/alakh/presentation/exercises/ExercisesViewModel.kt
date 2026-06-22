@@ -54,7 +54,9 @@ class ExercisesViewModel(app: Application) : AndroidViewModel(app) {
 private fun groupIntoSections(list: List<ExerciseListItem>): List<GroupSection> {
     val byGroup = list.groupBy { it.primaryMuscles.firstOrNull() ?: MuscleGroup.FULL_BODY }
     return GROUP_ORDER.mapNotNull { group ->
-        val items = byGroup[group]?.takeIf { it.isNotEmpty() }?.sortedBy { it.name }
+        // Most-used first, then alphabetical. usageCount comes from logged history.
+        val items = byGroup[group]?.takeIf { it.isNotEmpty() }
+            ?.sortedWith(compareByDescending<ExerciseListItem> { it.usageCount }.thenBy { it.name })
         items?.let { GroupSection(group, it) }
     }
 }

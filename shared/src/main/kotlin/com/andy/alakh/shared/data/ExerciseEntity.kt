@@ -20,6 +20,7 @@ data class ExerciseEntity(
     val trackedMetric: TrackedMetric,
     val instructions: List<String>,
     val isCustom: Boolean,
+    val usageCount: Int = 0,
 )
 
 fun ExerciseEntity.toModel(): Exercise = Exercise(

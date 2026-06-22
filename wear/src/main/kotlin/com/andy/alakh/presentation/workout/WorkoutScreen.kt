@@ -10,11 +10,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.andy.alakh.shared.data.WorkoutRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
@@ -31,6 +36,8 @@ fun WorkoutScreen(
     onFinished: () -> Unit,
 ) {
     val session by ActiveWorkout.draft.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     ScreenScaffold {
         val current = session
@@ -87,7 +94,17 @@ fun WorkoutScreen(
                 }
                 item {
                     Button(
-                        onClick = { ActiveWorkout.finish(); onFinished() },
+                        onClick = {
+                            val draft = ActiveWorkout.draft.value
+                            if (draft != null && draft.exercises.any { it.sets.isNotEmpty() }) {
+                                val log = draft.toSessionLog()
+                                scope.launch(Dispatchers.IO) {
+                                    runCatching { WorkoutRepository.get(context).saveSession(log) }
+                                }
+                            }
+                            ActiveWorkout.finish()
+                            onFinished()
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Finish") }
                 }

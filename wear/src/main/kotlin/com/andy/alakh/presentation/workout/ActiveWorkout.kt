@@ -1,8 +1,13 @@
 package com.andy.alakh.presentation.workout
 
 import com.andy.alakh.shared.data.ExerciseListItem
+import com.andy.alakh.shared.model.ExerciseRole
+import com.andy.alakh.shared.model.LoggedSet
 import com.andy.alakh.shared.model.MuscleGroup
+import com.andy.alakh.shared.model.PerformedExercise
+import com.andy.alakh.shared.model.SessionLog
 import com.andy.alakh.shared.model.SetType
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,3 +88,21 @@ object ActiveWorkout {
         editingIndex = -1
     }
 }
+
+/** Converts the in-memory draft into a persistable domain SessionLog. */
+fun DraftSession.toSessionLog(): SessionLog = SessionLog(
+    id = UUID.randomUUID().toString(),
+    routineId = null,
+    name = "Workout",
+    startedAtEpochMs = startedAtEpochMs,
+    endedAtEpochMs = System.currentTimeMillis(),
+    performedExercises = exercises.mapIndexed { index, draft ->
+        PerformedExercise(
+            exerciseId = draft.exerciseId,
+            role = ExerciseRole.NORMAL,
+            sets = draft.sets.map { LoggedSet(it.setType, it.weightKg, it.reps, it.rpe, completed = true) },
+            restSecondsBetweenSets = 90,
+            order = index,
+        )
+    },
+)

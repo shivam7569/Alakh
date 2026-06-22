@@ -3,7 +3,9 @@ package com.andy.alakh.shared.data
 import androidx.room.TypeConverter
 import com.andy.alakh.shared.model.Equipment
 import com.andy.alakh.shared.model.ExerciseCategory
+import com.andy.alakh.shared.model.ExerciseRole
 import com.andy.alakh.shared.model.MuscleGroup
+import com.andy.alakh.shared.model.SetType
 import com.andy.alakh.shared.model.TrackedMetric
 
 /**
@@ -21,6 +23,12 @@ class Converters {
 
     @TypeConverter fun metricToString(v: TrackedMetric): String = v.name
     @TypeConverter fun stringToMetric(v: String): TrackedMetric = TrackedMetric.valueOf(v)
+
+    @TypeConverter fun setTypeToString(v: SetType): String = v.name
+    @TypeConverter fun stringToSetType(v: String): SetType = SetType.valueOf(v)
+
+    @TypeConverter fun roleToString(v: ExerciseRole): String = v.name
+    @TypeConverter fun stringToRole(v: String): ExerciseRole = ExerciseRole.valueOf(v)
 
     @TypeConverter
     fun musclesToString(v: List<MuscleGroup>): String = v.joinToString(",") { it.name }
