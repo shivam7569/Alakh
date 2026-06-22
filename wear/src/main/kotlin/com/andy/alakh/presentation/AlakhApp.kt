@@ -6,6 +6,8 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.andy.alakh.presentation.breathing.BreathingScreen
+import com.andy.alakh.presentation.exercises.ExerciseDetailHolder
+import com.andy.alakh.presentation.exercises.ExerciseDetailScreen
 import com.andy.alakh.presentation.exercises.ExercisesScreen
 import com.andy.alakh.presentation.home.HomeScreen
 import com.andy.alakh.presentation.theme.AlakhTheme
@@ -21,6 +23,7 @@ object Routes {
     const val WORKOUT_PICK = "workout_pick"
     const val SET_ENTRY = "set_entry"
     const val EXERCISES = "exercises"
+    const val EXERCISE_DETAIL = "exercise_detail"
 }
 
 /** Root composable: theme + Wear navigation host wiring the three screens. */
@@ -41,7 +44,13 @@ fun AlakhApp() {
                     )
                 }
                 composable(Routes.BREATHING) { BreathingScreen() }
-                composable(Routes.EXERCISES) { ExercisesScreen() }
+                composable(Routes.EXERCISES) {
+                    ExercisesScreen(onSelect = { item ->
+                        ExerciseDetailHolder.item = item
+                        navController.navigate(Routes.EXERCISE_DETAIL)
+                    })
+                }
+                composable(Routes.EXERCISE_DETAIL) { ExerciseDetailScreen() }
                 composable(Routes.WORKOUT) {
                     WorkoutScreen(
                         onAddExercise = { navController.navigate(Routes.WORKOUT_PICK) },
