@@ -1,6 +1,7 @@
 package com.andy.alakh.presentation.workout
 
-import com.andy.alakh.shared.model.Exercise
+import com.andy.alakh.shared.data.ExerciseListItem
+import com.andy.alakh.shared.model.MuscleGroup
 import com.andy.alakh.shared.model.SetType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,8 +15,12 @@ data class DraftSet(
     val rpe: Double?,
 )
 
+/** A chosen exercise + its logged sets. Stores only the light fields the UI needs (no instructions). */
 data class DraftExercise(
-    val exercise: Exercise,
+    val exerciseId: String,
+    val name: String,
+    val primaryMuscles: List<MuscleGroup>,
+    val secondaryMuscles: List<MuscleGroup>,
     val sets: List<DraftSet> = emptyList(),
 )
 
@@ -25,12 +30,8 @@ data class DraftSession(
 )
 
 /**
- * The in-progress workout, held in memory as a process singleton so every workout screen
- * shares one session without ViewModel plumbing.
- *
- * NOTE: persistence to the database is the next step — for now finish()/discard() just clear
- * the draft. editingIndex carries "which exercise the set-entry screen is editing" so we don't
- * need typed navigation arguments yet.
+ * The in-progress workout, held in memory as a process singleton so every workout screen shares
+ * one session. Persistence to the database is the next step — finish()/discard() just clear it.
  */
 object ActiveWorkout {
 
@@ -46,11 +47,16 @@ object ActiveWorkout {
         if (_draft.value == null) _draft.value = DraftSession(System.currentTimeMillis())
     }
 
-    /** Adds an exercise to the session and returns its index. */
-    fun addExercise(exercise: Exercise): Int {
+    fun addExercise(item: ExerciseListItem): Int {
         startIfNeeded()
         val current = _draft.value!!
-        _draft.value = current.copy(exercises = current.exercises + DraftExercise(exercise))
+        val draftExercise = DraftExercise(
+            exerciseId = item.id,
+            name = item.name,
+            primaryMuscles = item.primaryMuscles,
+            secondaryMuscles = item.secondaryMuscles,
+        )
+        _draft.value = current.copy(exercises = current.exercises + draftExercise)
         return _draft.value!!.exercises.lastIndex
     }
 

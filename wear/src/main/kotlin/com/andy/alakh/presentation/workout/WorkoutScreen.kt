@@ -68,7 +68,7 @@ fun WorkoutScreen(
                 itemsIndexed(current.exercises) { index, draftExercise ->
                     Button(onClick = { onOpenExercise(index) }, modifier = Modifier.fillMaxWidth()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(draftExercise.exercise.name)
+                            Text(draftExercise.name)
                             Text(
                                 if (draftExercise.sets.isEmpty()) {
                                     "Tap to log a set"

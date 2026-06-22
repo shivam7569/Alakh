@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,12 +26,13 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
+import com.andy.alakh.presentation.components.BodyHeatmap
 import com.andy.alakh.shared.model.SetType
 
 /**
- * Logs one set. Weight is adjustable with the rotating crown (and +/- buttons); reps, RPE and
- * set type via taps. Everything pre-fills from the previous set ("accept or nudge"), which is
- * the friction-free model that makes on-watch logging viable.
+ * Logs one set. Weight is adjustable with the rotating crown (and +/- buttons); reps, RPE and set
+ * type via taps. Everything pre-fills from the previous set. A body heatmap up top shows which
+ * muscles this exercise targets.
  */
 @Composable
 fun SetEntryScreen(onLogged: () -> Unit) {
@@ -56,10 +58,18 @@ fun SetEntryScreen(onLogged: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = draftExercise?.exercise?.name ?: "Set",
+                text = draftExercise?.name ?: "Set",
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
             )
+
+            if (draftExercise != null) {
+                BodyHeatmap(
+                    primary = draftExercise.primaryMuscles.toSet(),
+                    secondary = draftExercise.secondaryMuscles.toSet(),
+                    modifier = Modifier.fillMaxWidth().height(94.dp),
+                )
+            }
 
             StepperRow(
                 label = "Weight (kg) · crown",

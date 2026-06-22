@@ -26,6 +26,17 @@ android {
         compose = true
     }
 
+    buildTypes {
+        release {
+            // Personal sideload: sign the release build with the shared debug key so it still
+            // installs and pairs with the phone. A release build is debuggable=false and FAR
+            // smoother than debug (Compose runs un-instrumented). Keep R8 off for now; enable it
+            // later with proguard keep-rules for Room/Compose.
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
     compileOptions {
         // With AGP 9 built-in Kotlin, the Kotlin jvmTarget defaults to targetCompatibility,
         // so setting Java 17 here covers both Java and Kotlin — no separate kotlin {} block needed.
