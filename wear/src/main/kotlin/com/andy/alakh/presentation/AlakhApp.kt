@@ -9,6 +9,8 @@ import com.andy.alakh.presentation.breathing.BreathingScreen
 import com.andy.alakh.presentation.exercises.ExercisesScreen
 import com.andy.alakh.presentation.home.HomeScreen
 import com.andy.alakh.presentation.theme.AlakhTheme
+import com.andy.alakh.presentation.workout.ActiveWorkout
+import com.andy.alakh.presentation.workout.SetEntryScreen
 import com.andy.alakh.presentation.workout.WorkoutScreen
 
 /** Navigation route keys. */
@@ -16,6 +18,8 @@ object Routes {
     const val HOME = "home"
     const val BREATHING = "breathing"
     const val WORKOUT = "workout"
+    const val WORKOUT_PICK = "workout_pick"
+    const val SET_ENTRY = "set_entry"
     const val EXERCISES = "exercises"
 }
 
@@ -37,8 +41,28 @@ fun AlakhApp() {
                     )
                 }
                 composable(Routes.BREATHING) { BreathingScreen() }
-                composable(Routes.WORKOUT) { WorkoutScreen() }
                 composable(Routes.EXERCISES) { ExercisesScreen() }
+                composable(Routes.WORKOUT) {
+                    WorkoutScreen(
+                        onAddExercise = { navController.navigate(Routes.WORKOUT_PICK) },
+                        onOpenExercise = { index ->
+                            ActiveWorkout.editingIndex = index
+                            navController.navigate(Routes.SET_ENTRY)
+                        },
+                        onFinished = { navController.popBackStack(Routes.HOME, false) },
+                    )
+                }
+                composable(Routes.WORKOUT_PICK) {
+                    ExercisesScreen(onSelect = { exercise ->
+                        ActiveWorkout.editingIndex = ActiveWorkout.addExercise(exercise)
+                        navController.navigate(Routes.SET_ENTRY) {
+                            popUpTo(Routes.WORKOUT_PICK) { inclusive = true }
+                        }
+                    })
+                }
+                composable(Routes.SET_ENTRY) {
+                    SetEntryScreen(onLogged = { navController.popBackStack() })
+                }
             }
         }
     }
