@@ -4,6 +4,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 
+/**
+ * On-device persistence + the SQL form of the per-exercise metrics. The aggregate queries below
+ * (heaviest weight, best set/session volume, Epley 1RM) mirror the pure reference implementation in
+ * `com.andy.alakh.shared.rules.StrengthStats`, which is unit-tested on CI. Keep the two in sync.
+ */
 @Dao
 interface WorkoutDao {
 

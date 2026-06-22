@@ -36,8 +36,44 @@ class HealthRulesTest {
     }
 
     @Test
+    fun heartRateZone_eachBandLowerBoundIsInclusive() {
+        // age 20 -> max HR 200. Each threshold % should land in the HIGHER zone.
+        assertThat(HealthRules.heartRateZone(100, 20)).isEqualTo(HeartRateZone.ZONE_1) // exactly 0.50
+        assertThat(HealthRules.heartRateZone(120, 20)).isEqualTo(HeartRateZone.ZONE_2) // exactly 0.60
+        assertThat(HealthRules.heartRateZone(140, 20)).isEqualTo(HeartRateZone.ZONE_3) // exactly 0.70
+        assertThat(HealthRules.heartRateZone(160, 20)).isEqualTo(HeartRateZone.ZONE_4) // exactly 0.80
+        assertThat(HealthRules.heartRateZone(180, 20)).isEqualTo(HeartRateZone.ZONE_5) // exactly 0.90
+    }
+
+    @Test
+    fun heartRateZone_zeroOrVeryLowIsRest() {
+        assertThat(HealthRules.heartRateZone(0, 20)).isEqualTo(HeartRateZone.REST)
+        assertThat(HealthRules.heartRateZone(40, 20)).isEqualTo(HeartRateZone.REST)
+    }
+
+    @Test
+    fun heartRateZone_aboveMaxStillClassifiesAsZone5() {
+        assertThat(HealthRules.heartRateZone(210, 20)).isEqualTo(HeartRateZone.ZONE_5)
+    }
+
+    @Test
+    fun maxHeartRate_handlesZeroAndNegativeAge() {
+        assertThat(HealthRules.maxHeartRate(0)).isEqualTo(220)
+        assertThat(HealthRules.maxHeartRate(-5)).isEqualTo(225) // formula still applies before the floor
+    }
+
+    @Test
     fun breathingPattern_cycleSeconds() {
         assertThat(HealthRules.BOX_BREATHING.cycleSec).isEqualTo(16)   // 4+4+4+4
         assertThat(HealthRules.RELAXING_478.cycleSec).isEqualTo(19)    // 4+7+8+0
+    }
+
+    @Test
+    fun breathingPattern_defaultsToBox() {
+        val p = HealthRules.BreathingPattern()
+        assertThat(p.inhaleSec).isEqualTo(4)
+        assertThat(p.holdSec).isEqualTo(4)
+        assertThat(p.exhaleSec).isEqualTo(4)
+        assertThat(p.holdAfterExhaleSec).isEqualTo(4)
     }
 }

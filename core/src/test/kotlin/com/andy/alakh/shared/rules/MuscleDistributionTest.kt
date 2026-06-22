@@ -66,4 +66,42 @@ class MuscleDistributionTest {
     fun emptySession_normalizesToEmpty() {
         assertThat(MuscleDistribution.normalizedPercent(session(), lookup)).isEmpty()
     }
+
+    @Test
+    fun fullBody_isInRawScoresButExcludedFromTheRadar() {
+        val burpee = Exercise(
+            id = "burpee", name = "Burpee", category = ExerciseCategory.CARDIO, equipment = Equipment.BODYWEIGHT,
+            primaryMuscles = listOf(MuscleGroup.FULL_BODY),
+        )
+        val local: (String) -> Exercise? = { id -> when (id) { "burpee" -> burpee; "bench" -> bench; else -> null } }
+        val s = session(
+            PerformedExercise("burpee", sets = listOf(workingSet(), workingSet(), workingSet(), workingSet()), order = 0),
+            PerformedExercise("bench", sets = listOf(workingSet(), workingSet()), order = 1),
+        )
+        // FULL_BODY is the most-worked group but is off-axis, so the radar normalizes to CHEST.
+        assertThat(MuscleDistribution.rawScores(s, local)[MuscleGroup.FULL_BODY]).isEqualTo(4.0)
+        val pct = MuscleDistribution.normalizedPercent(s, local)
+        assertThat(pct).doesNotContainKey(MuscleGroup.FULL_BODY)
+        assertThat(pct[MuscleGroup.CHEST]).isEqualTo(100)
+    }
+
+    @Test
+    fun warmupOnlyExercise_contributesNothing() {
+        val s = session(PerformedExercise("bench", sets = listOf(warmupSet(), warmupSet()), order = 0))
+        assertThat(MuscleDistribution.rawScores(s, lookup)).isEmpty()
+    }
+
+    @Test
+    fun sameMuscleAcrossExercises_accumulates() {
+        val incline = Exercise(
+            id = "incline", name = "Incline Press", category = ExerciseCategory.STRENGTH, equipment = Equipment.DUMBBELL,
+            primaryMuscles = listOf(MuscleGroup.CHEST), secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
+        )
+        val local: (String) -> Exercise? = { id -> when (id) { "bench" -> bench; "incline" -> incline; else -> null } }
+        val s = session(
+            PerformedExercise("bench", sets = listOf(workingSet(), workingSet()), order = 0),                 // CHEST +2.0
+            PerformedExercise("incline", sets = listOf(workingSet(), workingSet(), workingSet()), order = 1), // CHEST +3.0
+        )
+        assertThat(MuscleDistribution.rawScores(s, local)[MuscleGroup.CHEST]).isEqualTo(5.0)
+    }
 }
