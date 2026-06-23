@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
@@ -35,14 +36,13 @@ import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import com.andy.alakh.presentation.theme.AlakhAccent
+import androidx.wear.compose.material3.dynamicColorScheme
 import com.andy.alakh.shared.model.BreathPatternType
 import com.andy.alakh.shared.model.BreathingTechnique
 import kotlinx.coroutines.delay
 
 private const val POWER_BREATHS = 30          // standard per-round count for ROUNDS techniques
 private val Muted = Color(0xFF9AA3A0)
-private val Bloom = Color(0xFF7FE9C6)         // a lighter accent for the luminous core
 
 /** Orb states that drive the glow size/brightness. */
 private enum class Vis { READY, INHALE, HOLD_TOP, EXHALE, HOLD_BOTTOM }
@@ -63,6 +63,10 @@ private fun smoothstep(x: Float): Float { val t = x.coerceIn(0f, 1f); return t *
 fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
     val context = LocalContext.current
     val haptics = remember { BreathHaptics(context) }
+
+    // The breathing glow follows the watch's SYSTEM theme color (and updates if the user changes it)
+    // — only here; the rest of the app keeps its green accent. Falls back to the app theme primary.
+    val glowColor = dynamicColorScheme(context)?.primary ?: MaterialTheme.colorScheme.primary
 
     // Keep the display on for the whole session (no auto-dim mid-breath); released on exit.
     val view = LocalView.current
@@ -152,7 +156,7 @@ fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
 
     ScreenScaffold {
         Box(modifier = Modifier.fillMaxSize()) {
-            BreathingGlow(modifier = Modifier.fillMaxSize(), fill = fill, color = AlakhAccent)
+            BreathingGlow(modifier = Modifier.fillMaxSize(), fill = fill, color = glowColor)
             Column(
                 modifier = Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 56.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -197,12 +201,13 @@ private fun BreathingGlow(modifier: Modifier, fill: Float, color: Color) {
                 radius = ambientR,
             ),
         )
-        // Luminous bloom core for a soft, lit-from-within center.
+        // Luminous bloom core for a soft, lit-from-within center (a lighter tint of the glow color).
         val coreR = lerp(maxDim * 0.16f, maxDim * 0.5f, f)
         val coreA = lerp(0.22f, 0.9f, f)
+        val bloom = lerpColor(color, Color.White, 0.45f)
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(Bloom.copy(alpha = coreA), color.copy(alpha = coreA * 0.5f), Color.Transparent),
+                colors = listOf(bloom.copy(alpha = coreA), color.copy(alpha = coreA * 0.5f), Color.Transparent),
                 center = center,
                 radius = coreR,
             ),
