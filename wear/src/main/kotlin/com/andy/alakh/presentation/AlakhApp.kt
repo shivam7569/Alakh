@@ -5,7 +5,8 @@ import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
-import com.andy.alakh.presentation.breathing.BreathingCatalogScreen
+import com.andy.alakh.presentation.breathing.BreathingCategoriesScreen
+import com.andy.alakh.presentation.breathing.BreathingCategoryScreen
 import com.andy.alakh.presentation.breathing.BreathingDetailScreen
 import com.andy.alakh.presentation.breathing.BreathingNav
 import com.andy.alakh.presentation.breathing.BreathingRunScreen
@@ -26,7 +27,8 @@ import com.andy.alakh.shared.rules.BreathingCatalog
 /** Navigation route keys. */
 object Routes {
     const val HOME = "home"
-    const val BREATHING_CATALOG = "breathing_catalog"
+    const val BREATHING_CATEGORIES = "breathing_categories"
+    const val BREATHING_CATEGORY = "breathing_category"
     const val BREATHING_DETAIL = "breathing_detail"
     const val BREATHING_RUN = "breathing_run"
     const val WORKOUT = "workout"
@@ -50,15 +52,25 @@ fun AlakhApp() {
                 composable(Routes.HOME) {
                     HomeScreen(
                         onWorkout = { navController.navigate(Routes.WORKOUT) },
-                        onBreathing = { navController.navigate(Routes.BREATHING_CATALOG) },
+                        onBreathing = { navController.navigate(Routes.BREATHING_CATEGORIES) },
                         onExercises = { navController.navigate(Routes.EXERCISES) },
                     )
                 }
-                composable(Routes.BREATHING_CATALOG) {
-                    BreathingCatalogScreen(onSelect = { technique ->
-                        BreathingNav.selected = technique
-                        navController.navigate(Routes.BREATHING_DETAIL)
+                composable(Routes.BREATHING_CATEGORIES) {
+                    BreathingCategoriesScreen(onSelectCategory = { category ->
+                        BreathingNav.category = category
+                        navController.navigate(Routes.BREATHING_CATEGORY)
                     })
+                }
+                composable(Routes.BREATHING_CATEGORY) {
+                    val category = BreathingNav.category ?: BreathingCatalog.categories().first()
+                    BreathingCategoryScreen(
+                        category = category,
+                        onSelectTechnique = { technique ->
+                            BreathingNav.selected = technique
+                            navController.navigate(Routes.BREATHING_DETAIL)
+                        },
+                    )
                 }
                 composable(Routes.BREATHING_DETAIL) {
                     val technique = BreathingNav.selected ?: BreathingCatalog.all.first()

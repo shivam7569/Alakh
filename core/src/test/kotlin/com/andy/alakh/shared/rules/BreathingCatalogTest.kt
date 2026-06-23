@@ -122,4 +122,16 @@ class BreathingCatalogTest {
         assertThat(BreathingCatalog.GLOBAL_DISCLAIMER).contains("not medical advice")
         assertThat(BreathingCatalog.RETENTION_WARNING).contains("water")
     }
+
+    @Test
+    fun byCategoryRanked_ordersSafeFirstAndKeepsMembership() {
+        BreathCategory.entries.forEach { c ->
+            val ranked = BreathingCatalog.byCategoryRanked(c)
+            // same set of techniques as the unsorted view...
+            assertThat(ranked.toSet()).isEqualTo(BreathingCatalog.byCategory(c).toSet())
+            // ...but ordered by safety tier (GENERAL → CAUTION → ADVANCED).
+            val ordinals = ranked.map { it.safetyLevel.ordinal }
+            assertThat(ordinals).isEqualTo(ordinals.sorted())
+        }
+    }
 }

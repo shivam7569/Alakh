@@ -27,6 +27,7 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.andy.alakh.presentation.theme.AlakhAccent
+import com.andy.alakh.shared.model.BreathCategory
 import com.andy.alakh.shared.model.BreathPatternType
 import com.andy.alakh.shared.model.BreathSafetyLevel
 import com.andy.alakh.shared.model.BreathingTechnique
@@ -68,11 +69,10 @@ internal fun patternLabel(t: BreathingTechnique): String = when (t.patternType) 
 }
 
 /**
- * The breathing catalog: techniques grouped by category (each a small section), color-coded by
- * safety tier. Tapping a technique opens its detail/run screen.
+ * First breathing page: the segments (categories). Tapping one opens its [BreathingCategoryScreen].
  */
 @Composable
-fun BreathingCatalogScreen(onSelect: (BreathingTechnique) -> Unit) {
+fun BreathingCategoriesScreen(onSelectCategory: (BreathCategory) -> Unit) {
     ScreenScaffold {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -88,21 +88,8 @@ fun BreathingCatalogScreen(onSelect: (BreathingTechnique) -> Unit) {
                     color = AlakhAccent,
                 )
             }
-            BreathingCatalog.categories().forEach { category ->
-                item(key = "h_${category.name}", contentType = "header") {
-                    Text(
-                        category.displayName.uppercase(),
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Muted,
-                    )
-                }
-                items(
-                    BreathingCatalog.byCategory(category),
-                    key = { it.id },
-                    contentType = { "technique" },
-                ) { technique -> TechniqueRow(technique) { onSelect(technique) } }
+            items(BreathingCatalog.categories(), key = { it.name }, contentType = { "category" }) { category ->
+                CategoryCard(category, BreathingCatalog.byCategory(category).size) { onSelectCategory(category) }
             }
             item(key = "footer", contentType = "footer") {
                 Text(
@@ -114,6 +101,66 @@ fun BreathingCatalogScreen(onSelect: (BreathingTechnique) -> Unit) {
                 )
             }
         }
+    }
+}
+
+/**
+ * One segment's techniques, grouped Safe → Caution → Advanced. Tapping a technique opens its detail.
+ */
+@Composable
+fun BreathingCategoryScreen(category: BreathCategory, onSelectTechnique: (BreathingTechnique) -> Unit) {
+    val techniques = BreathingCatalog.byCategoryRanked(category)
+    ScreenScaffold {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = BreathingPadding,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            item(key = "title", contentType = "title") {
+                Text(
+                    category.displayName,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AlakhAccent,
+                )
+            }
+            BreathSafetyLevel.entries.forEach { tier ->
+                val inTier = techniques.filter { it.safetyLevel == tier }
+                if (inTier.isNotEmpty()) {
+                    item(key = "h_${tier.name}", contentType = "tier") {
+                        Text(
+                            safetyLabel(tier).uppercase(),
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = safetyColor(tier),
+                        )
+                    }
+                    items(inTier, key = { it.id }, contentType = { "technique" }) { technique ->
+                        TechniqueRow(technique) { onSelectTechnique(technique) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryCard(category: BreathCategory, count: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .clickable { onClick() }
+            .background(Color(0x14FFFFFF))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(category.displayName, style = MaterialTheme.typography.titleSmall, color = AlakhAccent, modifier = Modifier.weight(1f))
+        Text("$count", color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.width(8.dp))
+        Text("›", color = AlakhAccent, fontSize = 18.sp)
     }
 }
 

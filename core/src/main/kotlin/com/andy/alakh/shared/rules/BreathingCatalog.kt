@@ -1782,6 +1782,10 @@ object BreathingCatalog {
 
     fun byCategory(category: BreathCategory): List<BreathingTechnique> = all.filter { it.category == category }
 
+    /** Techniques in a category, ordered Safe → Caution → Advanced (stable within a tier). */
+    fun byCategoryRanked(category: BreathCategory): List<BreathingTechnique> =
+        all.filter { it.category == category }.sortedBy { it.safetyLevel.ordinal }
+
     /** Categories that actually have techniques, in catalog order. */
     fun categories(): List<BreathCategory> = all.map { it.category }.distinct()
 
