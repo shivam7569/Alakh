@@ -8,11 +8,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -25,10 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
@@ -42,12 +39,12 @@ import com.andy.alakh.presentation.theme.AlakhAccent
 import com.andy.alakh.shared.model.BreathPatternType
 import com.andy.alakh.shared.model.BreathingTechnique
 import kotlinx.coroutines.delay
-import kotlin.math.min
 
 private const val POWER_BREATHS = 30          // standard per-round count for ROUNDS techniques
 private val Muted = Color(0xFF9AA3A0)
+private val Bloom = Color(0xFF7FE9C6)         // a lighter accent for the luminous core
 
-/** Orb states that drive the animation. The arc fills over a phase; the orb is full on holds. */
+/** Orb states that drive the glow size/brightness. */
 private enum class Vis { READY, INHALE, HOLD_TOP, EXHALE, HOLD_BOTTOM }
 
 private fun fmtTime(totalSec: Int): String = "%d:%02d".format(totalSec / 60, totalSec % 60)
@@ -56,18 +53,18 @@ private fun fmtTime(totalSec: Int): String = "%d:%02d".format(totalSec / 60, tot
 private fun smoothstep(x: Float): Float { val t = x.coerceIn(0f, 1f); return t * t * (3f - 2f * t) }
 
 /**
- * Guided run for any catalog technique with an animated breathing orb (glow + concentric rings +
- * a phase-progress arc), keep-screen-on, and haptic cues on every in / out / hold transition.
- * PACED techniques loop inhale→hold→exhale→hold; FREEFORM-with-timing animates a gentle/rapid
- * paced breath; a no-metronome technique shows a calm pulse; ROUNDS (Wim Hof etc.) walk through
- * power-breaths → tap-to-end retention → recovery hold per round.
+ * Guided run for any catalog technique. The visual is a soft full-screen breathing glow that
+ * expands and brightens on the inhale and shrinks/dims on the exhale (no hard edges). Keeps the
+ * display on for the whole session and fires distinct haptic cues on every in / out / hold.
+ * PACED techniques loop inhale→hold→exhale→hold; ROUNDS (Wim Hof etc.) walk through power-breaths →
+ * tap-to-end retention → recovery hold; a no-metronome technique shows a calm pulse.
  */
 @Composable
 fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
     val context = LocalContext.current
     val haptics = remember { BreathHaptics(context) }
 
-    // 1) Keep the display on for the whole session (no auto-dim mid-breath).
+    // Keep the display on for the whole session (no auto-dim mid-breath); released on exit.
     val view = LocalView.current
     DisposableEffect(Unit) {
         view.keepScreenOn = true
@@ -84,10 +81,8 @@ fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
     var advanceRequested by remember { mutableStateOf(false) }
     var finished by remember { mutableStateOf(false) }
 
-    // Elapsed clock (delay-based, no wall-clock reads).
     LaunchedEffect(Unit) { while (!finished) { delay(1000); elapsedSec++ } }
 
-    // One phase: set visuals + fire the haptic, then animate progress over its duration.
     suspend fun runPhase(state: Vis, text: String, seconds: Double) {
         vis = state
         label = text
@@ -113,14 +108,12 @@ fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
                         runPhase(Vis.INHALE, "Power breaths", inhale)
                         runPhase(Vis.EXHALE, "Power breaths", exhale)
                     }
-                    // Retention: exhale and hold until the user taps.
                     label = "Exhale & hold"; vis = Vis.HOLD_BOTTOM; progress.snapTo(0f); haptics.exhale()
                     awaitingTap = true
                     advanceRequested = false
                     var held = 0
                     while (!advanceRequested) { delay(1000); held++; info = "Hold ${fmtTime(held)} — tap when you need air" }
                     awaitingTap = false
-                    // Recovery: big breath in, hold.
                     val recovery = if (technique.holdSec > 0) technique.holdSec else 15.0
                     runPhase(Vis.HOLD_TOP, "Breathe in & hold", recovery)
                 }
@@ -138,7 +131,6 @@ fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
                         info = "$cycles cycles"
                     }
                 } else {
-                    // No metronome (e.g. breath counting): a calm pulse, gentle in-cue only.
                     info = technique.nasalNote.ifBlank { "Follow your own pace" }
                     while (true) {
                         runPhase(Vis.INHALE, "Breathe naturally", 4.0)
@@ -149,33 +141,27 @@ fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
         }
     }
 
-    // Derive orb fill (0..1) and the arc fraction from the phase + progress.
+    // Glow fill 0..1 derived from phase + eased progress.
     val p = progress.value
-    val orbFrac = when (vis) {
+    val fill = when (vis) {
         Vis.INHALE -> smoothstep(p)
         Vis.HOLD_TOP -> 1f
         Vis.EXHALE -> smoothstep(1f - p)
         Vis.HOLD_BOTTOM, Vis.READY -> 0f
     }
-    val arc = if (vis == Vis.HOLD_BOTTOM && awaitingTap) 0f else p
 
     ScreenScaffold {
         Box(modifier = Modifier.fillMaxSize()) {
+            BreathingGlow(modifier = Modifier.fillMaxSize(), fill = fill, color = AlakhAccent)
             Column(
-                modifier = Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 54.dp),
+                modifier = Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 56.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top,
             ) {
-                Text(label, style = MaterialTheme.typography.titleMedium, color = AlakhAccent, textAlign = TextAlign.Center)
+                Text(label, style = MaterialTheme.typography.titleMedium, color = Color.White, textAlign = TextAlign.Center)
                 if (info.isNotBlank()) {
-                    Text(info, style = MaterialTheme.typography.bodySmall, color = Muted, textAlign = TextAlign.Center)
+                    Text(info, style = MaterialTheme.typography.bodySmall, color = Color(0xCCFFFFFF), textAlign = TextAlign.Center)
                 }
-                BreathingOrb(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    fill = orbFrac,
-                    arc = arc,
-                    color = AlakhAccent,
-                )
+                Spacer(Modifier.weight(1f))
                 Text(fmtTime(elapsedSec), style = MaterialTheme.typography.bodySmall, color = Muted)
             }
             when {
@@ -187,56 +173,39 @@ fun BreathingRunScreen(technique: BreathingTechnique, onExit: () -> Unit) {
     }
 }
 
-/** The animated orb: a soft glow halo, faint concentric rings, a gradient sphere, and a progress arc. */
+/**
+ * The breathing glow: a soft, full-screen luminous light that grows and brightens with [fill]
+ * (inhale) and shrinks/dims toward the dark screen on the exhale. No hard edges, rings, or arc —
+ * a clean, immersive look (inspired by the reference video).
+ */
 @Composable
-private fun BreathingOrb(modifier: Modifier, fill: Float, arc: Float, color: Color) {
+private fun BreathingGlow(modifier: Modifier, fill: Float, color: Color) {
     Canvas(modifier = modifier) {
+        val f = fill.coerceIn(0f, 1f)
         val cx = size.width / 2f
-        val cy = size.height / 2f
-        val maxR = min(size.width, size.height) * 0.40f
-        val minR = maxR * 0.42f
-        val r = lerp(minR, maxR, fill.coerceIn(0f, 1f))
+        val cy = size.height * 0.46f          // bloom sits slightly above center
+        val maxDim = size.maxDimension
         val center = Offset(cx, cy)
 
-        // Soft glow halo behind the orb.
-        drawCircle(
+        // Ambient halo: fills the screen on inhale, fades to the dark edges.
+        val ambientR = lerp(maxDim * 0.42f, maxDim * 1.05f, f)
+        val ambientA = lerp(0.14f, 0.55f, f)
+        drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(color.copy(alpha = 0.30f), Color.Transparent),
+                colors = listOf(color.copy(alpha = ambientA), color.copy(alpha = ambientA * 0.35f), Color.Transparent),
                 center = center,
-                radius = r * 1.9f,
+                radius = ambientR,
             ),
-            radius = r * 1.9f,
-            center = center,
         )
-        // Faint concentric rings for depth.
-        for (i in 1..3) {
-            drawCircle(
-                color = color.copy(alpha = 0.05f * (4 - i)),
-                radius = r * (1f + 0.16f * i),
-                center = center,
-                style = Stroke(width = 1.5f),
-            )
-        }
-        // The orb itself, lit from upper-left for a spherical feel.
-        drawCircle(
+        // Luminous bloom core for a soft, lit-from-within center.
+        val coreR = lerp(maxDim * 0.16f, maxDim * 0.5f, f)
+        val coreA = lerp(0.22f, 0.9f, f)
+        drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(color.copy(alpha = 0.95f), color.copy(alpha = 0.55f)),
-                center = Offset(cx - r * 0.25f, cy - r * 0.25f),
-                radius = r * 1.25f,
+                colors = listOf(Bloom.copy(alpha = coreA), color.copy(alpha = coreA * 0.5f), Color.Transparent),
+                center = center,
+                radius = coreR,
             ),
-            radius = r,
-            center = center,
-        )
-        // Phase-progress arc on a fixed ring around the orb's max extent.
-        val arcR = maxR * 1.12f
-        drawArc(
-            color = color,
-            startAngle = -90f,
-            sweepAngle = 360f * arc.coerceIn(0f, 1f),
-            useCenter = false,
-            topLeft = Offset(cx - arcR, cy - arcR),
-            size = Size(arcR * 2f, arcR * 2f),
-            style = Stroke(width = 4f),
         )
     }
 }
