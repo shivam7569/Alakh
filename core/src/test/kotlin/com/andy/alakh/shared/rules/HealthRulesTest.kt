@@ -76,4 +76,29 @@ class HealthRulesTest {
         assertThat(p.exhaleSec).isEqualTo(4)
         assertThat(p.holdAfterExhaleSec).isEqualTo(4)
     }
+
+    @Test
+    fun ageOnDate_countsWholeYearsAndRespectsBirthday() {
+        // DOB 1996-02-17.
+        assertThat(HealthRules.ageOnDate(1996, 2, 17, 2026, 6, 23)).isEqualTo(30) // birthday passed
+        assertThat(HealthRules.ageOnDate(1996, 2, 17, 2026, 2, 17)).isEqualTo(30) // on the birthday
+        assertThat(HealthRules.ageOnDate(1996, 2, 17, 2026, 2, 16)).isEqualTo(29) // day before
+        assertThat(HealthRules.ageOnDate(1996, 2, 17, 2026, 1, 5)).isEqualTo(29)  // earlier month
+    }
+
+    @Test
+    fun zoneForMaxHeartRate_matchesBandsForExplicitMax() {
+        // max 190 (age 30): zone thresholds at 95/114/133/152/171 bpm.
+        assertThat(HealthRules.zoneForMaxHeartRate(90, 190)).isEqualTo(HeartRateZone.REST)
+        assertThat(HealthRules.zoneForMaxHeartRate(95, 190)).isEqualTo(HeartRateZone.ZONE_1) // exactly 50%
+        assertThat(HealthRules.zoneForMaxHeartRate(160, 190)).isEqualTo(HeartRateZone.ZONE_4)
+        assertThat(HealthRules.zoneForMaxHeartRate(180, 190)).isEqualTo(HeartRateZone.ZONE_5)
+    }
+
+    @Test
+    fun heartRatePercent_clampsToRange() {
+        assertThat(HealthRules.heartRatePercent(95, 190)).isEqualTo(50)
+        assertThat(HealthRules.heartRatePercent(0, 190)).isEqualTo(0)
+        assertThat(HealthRules.heartRatePercent(250, 190)).isEqualTo(100) // clamped
+    }
 }

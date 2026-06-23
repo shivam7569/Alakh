@@ -48,13 +48,17 @@ class ExerciseRepository private constructor(context: Context) {
             val hr = update.latestMetrics
                 .getData(DataType.HEART_RATE_BPM)
                 .lastOrNull()?.value?.toInt()
+            // CALORIES_TOTAL / DISTANCE_TOTAL are cumulative aggregates (total since the exercise began).
+            val calories = update.latestMetrics.getData(DataType.CALORIES_TOTAL)?.total
+            val distance = update.latestMetrics.getData(DataType.DISTANCE_TOTAL)?.total
             val elapsedMs = update.activeDurationCheckpoint?.activeDuration?.toMillis()
                 ?: _metrics.value.elapsedMs
 
             _metrics.value = _metrics.value.copy(
                 heartRateBpm = hr ?: _metrics.value.heartRateBpm,
+                calories = calories ?: _metrics.value.calories,
+                distanceMeters = distance ?: _metrics.value.distanceMeters,
                 elapsedMs = elapsedMs,
-                // TODO: pull CALORIES_TOTAL / DISTANCE_TOTAL (aggregate data points) from update.latestMetrics.
             )
 
             _status.value = if (update.exerciseStateInfo.state == ExerciseState.ENDED) {

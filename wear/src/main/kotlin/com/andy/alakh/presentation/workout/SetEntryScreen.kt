@@ -120,6 +120,7 @@ fun SetEntryScreen(onLogged: () -> Unit) {
                                 rpe = rpe,
                             ),
                         )
+                        RestTimer.start() // auto-start the rest countdown after logging a set
                     }
                     onLogged()
                 },

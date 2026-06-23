@@ -9,8 +9,22 @@ object HealthRules {
     /** HRmax estimate (220 - age), floored so the math stays sane for odd inputs. */
     fun maxHeartRate(age: Int): Int = (220 - age).coerceAtLeast(100)
 
-    fun heartRateZone(bpm: Int, age: Int): HeartRateZone {
-        val pct = bpm.toDouble() / maxHeartRate(age)
+    /**
+     * Whole-years age on a given date, from a birth date. Computed dynamically (not stored) so HR
+     * zones stay correct as time passes. Pure: the caller passes "today" (e.g. from LocalDate.now()).
+     */
+    fun ageOnDate(
+        birthYear: Int, birthMonth: Int, birthDay: Int,
+        onYear: Int, onMonth: Int, onDay: Int,
+    ): Int {
+        var age = onYear - birthYear
+        if (onMonth < birthMonth || (onMonth == birthMonth && onDay < birthDay)) age--
+        return age.coerceAtLeast(0)
+    }
+
+    /** Zone from an explicit max HR — lets the watch use a manual override instead of 220−age. */
+    fun zoneForMaxHeartRate(bpm: Int, maxHr: Int): HeartRateZone {
+        val pct = bpm.toDouble() / maxHr.coerceAtLeast(1)
         return when {
             pct < 0.50 -> HeartRateZone.REST
             pct < 0.60 -> HeartRateZone.ZONE_1
@@ -20,6 +34,12 @@ object HealthRules {
             else -> HeartRateZone.ZONE_5
         }
     }
+
+    /** % of max HR, clamped to 0–100 — drives the zone ring on the workout monitor. */
+    fun heartRatePercent(bpm: Int, maxHr: Int): Int =
+        ((bpm.toDouble() / maxHr.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)
+
+    fun heartRateZone(bpm: Int, age: Int): HeartRateZone = zoneForMaxHeartRate(bpm, maxHeartRate(age))
 
     /** A guided breathing pattern, in seconds per phase. */
     data class BreathingPattern(
