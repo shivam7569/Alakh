@@ -41,6 +41,25 @@ object HealthRules {
 
     fun heartRateZone(bpm: Int, age: Int): HeartRateZone = zoneForMaxHeartRate(bpm, maxHeartRate(age))
 
+    /**
+     * Where a heart rate sits on the workout monitor's four-segment gauge (Light / Fat-burn / Cardio
+     * / Peak): [zoneIndex] 0–3, the [withinZone] fraction 0–1, and the overall [gaugeFraction] 0–1.
+     * Zone bounds are a resting floor, then 50 / 70 / 85% of max HR — the floor keeps a normal
+     * resting/working HR off the empty start of the gauge.
+     */
+    data class HrGaugePosition(val zoneIndex: Int, val withinZone: Float, val gaugeFraction: Float)
+
+    fun hrGaugePosition(bpm: Int, maxHr: Int, restingFloorBpm: Int = 50): HrGaugePosition {
+        val safeMax = maxHr.coerceAtLeast(restingFloorBpm + 4)
+        val floor = restingFloorBpm.toFloat().coerceAtMost(safeMax * 0.45f) // keep bounds strictly increasing
+        val bounds = floatArrayOf(floor, safeMax * 0.50f, safeMax * 0.70f, safeMax * 0.85f, safeMax.toFloat())
+        val v = bpm.toFloat().coerceIn(bounds[0], bounds[4])
+        var zone = 3
+        for (i in 0 until 4) if (v < bounds[i + 1]) { zone = i; break }
+        val within = ((v - bounds[zone]) / (bounds[zone + 1] - bounds[zone])).coerceIn(0f, 1f)
+        return HrGaugePosition(zone, within, (zone + within) / 4f)
+    }
+
     /** A guided breathing pattern, in seconds per phase. */
     data class BreathingPattern(
         val inhaleSec: Int = 4,

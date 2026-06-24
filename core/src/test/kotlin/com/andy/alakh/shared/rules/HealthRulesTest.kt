@@ -101,4 +101,43 @@ class HealthRulesTest {
         assertThat(HealthRules.heartRatePercent(0, 190)).isEqualTo(0)
         assertThat(HealthRules.heartRatePercent(250, 190)).isEqualTo(100) // clamped
     }
+
+    @Test
+    fun hrGaugePosition_normalHeartRateIsNotAtZero() {
+        // Regression: 78 bpm at max 190 must land inside the Light zone, not the empty start.
+        val p = HealthRules.hrGaugePosition(78, 190)
+        assertThat(p.zoneIndex).isEqualTo(0)                 // Light
+        assertThat(p.withinZone).isWithin(0.01f).of(0.622f)  // (78-50)/(95-50)
+        assertThat(p.gaugeFraction).isGreaterThan(0.1f)
+    }
+
+    @Test
+    fun hrGaugePosition_mapsEachZoneByBounds() {
+        // max 190 → bounds 50 / 95 / 133 / 161.5 / 190.
+        assertThat(HealthRules.hrGaugePosition(95, 190).zoneIndex).isEqualTo(1)  // exactly 50% → Fat burn start
+        assertThat(HealthRules.hrGaugePosition(130, 190).zoneIndex).isEqualTo(1) // Fat burn
+        assertThat(HealthRules.hrGaugePosition(150, 190).zoneIndex).isEqualTo(2) // Cardio
+        assertThat(HealthRules.hrGaugePosition(175, 190).zoneIndex).isEqualTo(3) // Peak
+    }
+
+    @Test
+    fun hrGaugePosition_clampsBelowFloorAndAboveMax() {
+        val low = HealthRules.hrGaugePosition(40, 190)   // below the 50 floor
+        assertThat(low.zoneIndex).isEqualTo(0)
+        assertThat(low.withinZone).isEqualTo(0f)
+
+        val high = HealthRules.hrGaugePosition(250, 190) // above max
+        assertThat(high.zoneIndex).isEqualTo(3)
+        assertThat(high.withinZone).isEqualTo(1f)
+        assertThat(high.gaugeFraction).isEqualTo(1f)
+    }
+
+    @Test
+    fun hrGaugePosition_handlesLowMaxWithoutDivideByZero() {
+        // Floored max (100): bounds stay strictly increasing (floor capped below 50%).
+        val p = HealthRules.hrGaugePosition(60, 100)
+        assertThat(p.zoneIndex).isIn(0..3)
+        assertThat(p.withinZone).isAtLeast(0f)
+        assertThat(p.withinZone).isAtMost(1f)
+    }
 }

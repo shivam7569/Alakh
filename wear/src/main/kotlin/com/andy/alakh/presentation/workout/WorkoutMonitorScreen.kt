@@ -43,6 +43,7 @@ import androidx.wear.compose.material3.dynamicColorScheme
 import com.andy.alakh.health.PermissionHelper
 import com.andy.alakh.health.UserProfile
 import com.andy.alakh.health.WorkoutSensors
+import com.andy.alakh.shared.rules.HealthRules
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
@@ -89,16 +90,10 @@ fun WorkoutMonitorScreen() {
     val elapsedMs = if (startedAt != null) (nowMs - startedAt).coerceAtLeast(0L) else 0L
 
     val hr = metrics.heartRateBpm
-    // Zone boundaries (bpm): floor 50, then 50% / 70% / 85% of max HR — the four zone segments.
-    val bounds = floatArrayOf(50f, maxHr * 0.50f, maxHr * 0.70f, maxHr * 0.85f, maxHr.toFloat())
-    var zoneIdx = 0
-    var within = 0f
-    if (hr != null) {
-        val bpm = hr.toFloat().coerceIn(bounds[0], bounds[4])
-        zoneIdx = 3
-        for (i in 0 until 4) if (bpm < bounds[i + 1]) { zoneIdx = i; break }
-        within = ((bpm - bounds[zoneIdx]) / (bounds[zoneIdx + 1] - bounds[zoneIdx])).coerceIn(0f, 1f)
-    }
+    // The 4-zone gauge mapping (Light / Fat-burn / Cardio / Peak) lives in :core and is unit-tested.
+    val gauge = hr?.let { HealthRules.hrGaugePosition(it, maxHr) }
+    val zoneIdx = gauge?.zoneIndex ?: 0
+    val within = gauge?.withinZone ?: 0f
     val zoneColor = if (hr != null) ZoneColors[zoneIdx] else Muted
 
     val subline = when {
