@@ -22,7 +22,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -43,24 +42,21 @@ import com.andy.alakh.health.PermissionHelper
 import com.andy.alakh.health.UserProfile
 import com.andy.alakh.health.WorkoutSensors
 import com.andy.alakh.shared.rules.HealthRules
-import com.andy.alakh.shared.rules.HealthRules.HeartRateZone
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
 private val Muted = Color(0xFF9AA3A0)
-private val Teal = Color(0xFF36D0C8)        // the native HR fill / heart color
 private val ZoneText = Color(0xFFE6E6EE)
 
-private fun zoneName(zone: HeartRateZone): String = when (zone) {
-    HeartRateZone.REST -> "Resting"
-    HeartRateZone.ZONE_1 -> "Warm-up zone"
-    HeartRateZone.ZONE_2 -> "Light zone"
-    HeartRateZone.ZONE_3 -> "Cardio zone"
-    HeartRateZone.ZONE_4 -> "Hard zone"
-    HeartRateZone.ZONE_5 -> "Peak zone"
-}
+// The four heart-rate zones shown on the gauge (cool → warm), each its own ring segment.
+private val ZoneColors = listOf(Color(0xFF36D0C8), Color(0xFF46C66E), Color(0xFFE8A93D), Color(0xFFE0573E))
+private val ZoneNames = listOf("Light", "Fat burn", "Cardio", "Peak")
+
+/** Which of the 4 gauge zones the value sits in (0–3), from the gauge fraction. */
+private fun gaugeZone(frac: Float): Int = (frac * 4f).toInt().coerceIn(0, 3)
 
 private fun fmtTime(elapsedMs: Long): String {
     val total = (elapsedMs / 1000).toInt()
@@ -68,9 +64,9 @@ private fun fmtTime(elapsedMs: Long): String {
 }
 
 /**
- * Live workout monitor, matching the watch's native heart-rate screen: a wide (~320°) gauge with a
- * lavender track, a teal fill + white dot marking the value, a teal heart in the center, the
- * "Heart rate" label, the big BPM, the zone name, and labeled calories + time.
+ * Live workout monitor, matched to the watch's native HR screen: a ring of FOUR zone segments
+ * (lavender track) that fill up to a white dot in the CURRENT zone's color, with a heart in the
+ * center that takes the same zone color, plus the BPM, zone name, and labeled calories + time.
  */
 @Composable
 fun WorkoutMonitorScreen() {
@@ -88,13 +84,14 @@ fun WorkoutMonitorScreen() {
     }
 
     val hr = metrics.heartRateBpm
-    val zone = hr?.let { HealthRules.zoneForMaxHeartRate(it, maxHr) }
     val pct = hr?.let { HealthRules.heartRatePercent(it, maxHr) } ?: 0
-    // Gauge spans ~40%→100% of max HR, so resting sits near the start (low, lower-left) like the native.
-    val frac = ((pct - 40f) / 60f).coerceIn(0f, 1f)
+    // Gauge spans ~40%→100% of max HR (≈ Light / Fat burn / Cardio / Peak), so resting sits near the start.
+    val frac = if (hr != null) ((pct - 40f) / 60f).coerceIn(0f, 1f) else 0f
+    val zone = gaugeZone(frac)
+    val zoneColor = if (hr != null) ZoneColors[zone] else Muted
 
     val subline = when {
-        zone != null -> zoneName(zone)
+        hr != null -> "${ZoneNames[zone]} zone"
         bodySensorsMissing -> "Body Sensors needed"
         else -> diagnostic ?: "Waiting for heart rate…"
     }
@@ -106,7 +103,7 @@ fun WorkoutMonitorScreen() {
             verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                HeartGauge(frac = frac, track = track, fill = Teal, modifier = Modifier.size(74.dp))
+                ZoneGauge(frac = frac, active = zoneColor, track = track, hasValue = hr != null, modifier = Modifier.size(76.dp))
             }
             Text("Heart rate", fontSize = 13.sp, color = track)
             Row(verticalAlignment = Alignment.Bottom) {
@@ -144,11 +141,13 @@ private fun StatMini(value: String, label: String) {
 }
 
 /**
- * Native-style HR gauge: a ~320° arc with a small gap at the bottom, a lavender [track], a [fill]
- * (teal) up to [frac] of the way round, and a white dot (teal core) marking the value.
+ * The native-style HR gauge: a ~320° ring split into FOUR zone segments (gaps between). Each segment
+ * is dim [track] where the value hasn't reached, and filled in the current zone's [active] color up
+ * to the white dot. The outline heart in the center takes the same [active] color. No overlapping
+ * layers — filled and unfilled portions are distinct, non-overlapping arc ranges.
  */
 @Composable
-private fun HeartGauge(frac: Float, track: Color, fill: Color, modifier: Modifier) {
+private fun ZoneGauge(frac: Float, active: Color, track: Color, hasValue: Boolean, modifier: Modifier) {
     Canvas(modifier = modifier) {
         val stroke = 6.dp.toPx()
         val r = (min(size.width, size.height) - stroke) / 2f
@@ -156,31 +155,41 @@ private fun HeartGauge(frac: Float, track: Color, fill: Color, modifier: Modifie
         val cy = size.height / 2f
         val topLeft = Offset(cx - r, cy - r)
         val arcSize = Size(r * 2f, r * 2f)
-        val start = 110f
-        val total = 320f
-        val f = frac.coerceIn(0f, 1f)
 
-        // Segmented (dashed, rounded) lavender track.
-        drawArc(
-            track.copy(alpha = 0.7f), start, total, false, topLeft, arcSize,
-            style = Stroke(stroke, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(stroke * 3.5f, stroke * 2f), 0f)),
-        )
-        // Smooth continuous teal fill up to the current value.
-        drawArc(fill, start, total * f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+        val startDeg = 110f
+        val totalDeg = 320f
+        val gap = 8f
+        val seg = (totalDeg - 3f * gap) / 4f
+        val dotDeg = startDeg + totalDeg * frac.coerceIn(0f, 1f)
+        val dim = track.copy(alpha = 0.5f)
 
-        // White dot marking the value (teal core).
-        val ang = (start + total * f) * (PI / 180.0)
-        val dot = Offset(cx + r * cos(ang).toFloat(), cy + r * sin(ang).toFloat())
-        drawCircle(Color.White, stroke * 0.82f, dot)
-        drawCircle(fill, stroke * 0.42f, dot)
+        for (i in 0 until 4) {
+            val s0 = startDeg + i * (seg + gap)
+            val s1 = s0 + seg
+            if (hasValue && dotDeg > s0) { // filled portion of this segment
+                val end = min(s1, dotDeg)
+                drawArc(active, s0, end - s0, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            }
+            if (!hasValue || dotDeg < s1) { // unfilled (dim) portion
+                val st = max(s0, dotDeg)
+                drawArc(dim, st, s1 - st, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            }
+        }
 
-        // Cyan outline heart in the center.
+        if (hasValue) {
+            val ang = dotDeg * (PI / 180.0)
+            val dot = Offset(cx + r * cos(ang).toFloat(), cy + r * sin(ang).toFloat())
+            drawCircle(Color.White, stroke * 0.82f, dot)
+            drawCircle(active, stroke * 0.42f, dot)
+        }
+
+        // Outline heart in the center, in the current zone color.
         val hs = r * 0.5f
         val heart = Path().apply {
             moveTo(cx, cy - hs * 0.25f)
             cubicTo(cx - hs * 0.5f, cy - hs * 0.95f, cx - hs * 1.3f, cy - hs * 0.1f, cx, cy + hs * 0.7f)
             cubicTo(cx + hs * 1.3f, cy - hs * 0.1f, cx + hs * 0.5f, cy - hs * 0.95f, cx, cy - hs * 0.25f)
         }
-        drawPath(heart, fill, style = Stroke(width = stroke * 0.62f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(heart, active, style = Stroke(width = stroke * 0.62f, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
