@@ -1,6 +1,10 @@
 package com.andy.alakh.health
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.ExerciseUpdateCallback
 import androidx.health.services.client.HealthServices
@@ -35,8 +39,12 @@ import kotlin.coroutines.resumeWithException
  */
 class ExerciseRepository private constructor(context: Context) {
 
+    private val appContext = context.applicationContext
     private val exerciseClient: ExerciseClient =
-        HealthServices.getClient(context.applicationContext).exerciseClient
+        HealthServices.getClient(appContext).exerciseClient
+
+    private fun granted(permission: String): Boolean =
+        ContextCompat.checkSelfPermission(appContext, permission) == PackageManager.PERMISSION_GRANTED
 
     private val _metrics = MutableStateFlow(ExerciseMetrics())
     val metrics: StateFlow<ExerciseMetrics> = _metrics.asStateFlow()
@@ -77,7 +85,8 @@ class ExerciseRepository private constructor(context: Context) {
         override fun onLapSummaryReceived(lapSummary: ExerciseLapSummary) {}
         override fun onRegistered() {}
         override fun onRegistrationFailed(throwable: Throwable) {
-            _diagnostic.value = "Sensor registration failed: ${throwable.message ?: throwable.javaClass.simpleName}"
+            Log.w(TAG, "Sensor registration failed", throwable)
+            _diagnostic.value = "Sensor connect failed"
         }
 
         override fun onAvailabilityChanged(dataType: DataType<*, *>, availability: Availability) {
@@ -85,8 +94,8 @@ class ExerciseRepository private constructor(context: Context) {
                 _diagnostic.value = when (availability) {
                     DataTypeAvailability.AVAILABLE -> null
                     DataTypeAvailability.ACQUIRING -> "Acquiring heart rate…"
-                    DataTypeAvailability.UNAVAILABLE_DEVICE_OFF_BODY -> "Put the watch on snugly"
-                    else -> "Heart-rate sensor unavailable"
+                    DataTypeAvailability.UNAVAILABLE_DEVICE_OFF_BODY -> "Wear watch snugly"
+                    else -> "HR sensor unavailable"
                 }
             }
         }
@@ -107,10 +116,15 @@ class ExerciseRepository private constructor(context: Context) {
             val supported = exerciseClient.getCapabilitiesAsync().awaitFuture()
                 .getExerciseTypeCapabilities(exerciseType)
                 .supportedDataTypes
+
+            // Only request a metric when the device supports it AND we hold its permission, so a
+            // missing calories permission can't block heart rate. (HR = BODY_SENSORS; calories =
+            // ACTIVITY_RECOGNITION.) Distance is irrelevant to a stationary strength workout.
+            val wantsHr = DataType.HEART_RATE_BPM in supported && granted(Manifest.permission.BODY_SENSORS)
+            val wantsCalories = DataType.CALORIES_TOTAL in supported && granted(Manifest.permission.ACTIVITY_RECOGNITION)
             val wanted = mutableSetOf<DataType<*, *>>()
-            for (dataType in listOf(DataType.HEART_RATE_BPM, DataType.CALORIES_TOTAL, DataType.DISTANCE_TOTAL)) {
-                if (dataType in supported) wanted.add(dataType)
-            }
+            if (wantsHr) wanted.add(DataType.HEART_RATE_BPM)
+            if (wantsCalories) wanted.add(DataType.CALORIES_TOTAL)
 
             val config = ExerciseConfig.builder(exerciseType)
                 .setDataTypes(wanted)
@@ -119,11 +133,11 @@ class ExerciseRepository private constructor(context: Context) {
                 .build()
             exerciseClient.startExerciseAsync(config).awaitFuture()
             _status.value = ExerciseStatus.ACTIVE
-            _diagnostic.value = if (DataType.HEART_RATE_BPM in supported) "Acquiring heart rate…"
-            else "Heart rate not supported for this workout type"
+            _diagnostic.value = if (wantsHr) "Acquiring heart rate…" else "Heart rate off"
         } catch (e: Throwable) {
+            Log.w(TAG, "Failed to start exercise", e)
             _status.value = ExerciseStatus.NOT_STARTED
-            _diagnostic.value = "Couldn't start tracking: ${e.message ?: e.javaClass.simpleName}"
+            _diagnostic.value = "Couldn't start tracking"
         }
     }
 
@@ -135,6 +149,8 @@ class ExerciseRepository private constructor(context: Context) {
     }
 
     companion object {
+        private const val TAG = "ExerciseRepository"
+
         @Volatile private var instance: ExerciseRepository? = null
 
         fun getInstance(context: Context): ExerciseRepository =

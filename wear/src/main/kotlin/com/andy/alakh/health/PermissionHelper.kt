@@ -16,9 +16,11 @@ object PermissionHelper {
         Manifest.permission.POST_NOTIFICATIONS,
     )
 
-    // What the strength-workout monitor actually needs (no GPS): heart rate + the FGS notification.
+    // What the strength-workout monitor needs (no GPS): heart rate (BODY_SENSORS), calories
+    // (ACTIVITY_RECOGNITION), and the FGS notification (POST_NOTIFICATIONS).
     val SENSOR_PERMISSIONS = listOf(
         Manifest.permission.BODY_SENSORS,
+        Manifest.permission.ACTIVITY_RECOGNITION,
         Manifest.permission.POST_NOTIFICATIONS,
     )
 
