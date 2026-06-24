@@ -40,6 +40,10 @@ import com.andy.alakh.health.UserProfile
 import com.andy.alakh.health.WorkoutSensors
 import com.andy.alakh.shared.rules.HealthRules
 import com.andy.alakh.shared.rules.HealthRules.HeartRateZone
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
 private val Muted = Color(0xFF9AA3A0)
 
@@ -103,8 +107,8 @@ fun WorkoutMonitorScreen() {
             verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                ZoneRing(percent = pct, color = accent, modifier = Modifier.size(60.dp))
-                Text("♥", color = accent, fontSize = 18.sp)
+                ZoneGauge(percent = pct, color = accent, modifier = Modifier.size(72.dp))
+                Text("♥", color = accent, fontSize = 17.sp)
             }
             Text("Heart rate", fontSize = 13.sp, color = Color(0xFFB9A7E8))
             Row(verticalAlignment = Alignment.Bottom) {
@@ -120,11 +124,10 @@ fun WorkoutMonitorScreen() {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                "${metrics.calories?.toInt() ?: 0} kcal  ·  ${fmtTime(metrics.elapsedMs)}",
-                fontSize = 12.sp,
-                color = Muted,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                StatMini("${metrics.calories?.toInt() ?: 0}", "kcal")
+                StatMini(fmtTime(metrics.elapsedMs), "time")
+            }
             if (bodySensorsMissing) {
                 Button(onClick = { permLauncher.launch(PermissionHelper.SENSOR_PERMISSIONS.toTypedArray()) }) {
                     Text("Grant sensors", fontSize = 13.sp)
@@ -134,23 +137,37 @@ fun WorkoutMonitorScreen() {
     }
 }
 
-/** A circular gauge filled to [percent] of max HR, colored by the current zone. */
 @Composable
-private fun ZoneRing(percent: Int, color: Color, modifier: Modifier) {
+private fun StatMini(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Text(label, fontSize = 9.sp, color = Muted)
+    }
+}
+
+/**
+ * The native-style HR gauge: a 270° arc with a gap at the bottom, a dim full-range track, a colored
+ * fill up to the current % of max HR, and a dot marking the value — matching the watch's HR screen.
+ */
+@Composable
+private fun ZoneGauge(percent: Int, color: Color, modifier: Modifier) {
     Canvas(modifier = modifier) {
-        val stroke = 5.dp.toPx()
-        val inset = stroke / 2f
-        val arcSize = Size(size.width - stroke, size.height - stroke)
-        val topLeft = Offset(inset, inset)
-        drawArc(
-            color = color.copy(alpha = 0.18f),
-            startAngle = 0f, sweepAngle = 360f, useCenter = false,
-            topLeft = topLeft, size = arcSize, style = Stroke(width = stroke),
-        )
-        drawArc(
-            color = color,
-            startAngle = -90f, sweepAngle = 360f * (percent.coerceIn(0, 100) / 100f), useCenter = false,
-            topLeft = topLeft, size = arcSize, style = Stroke(width = stroke, cap = StrokeCap.Round),
-        )
+        val stroke = 6.dp.toPx()
+        val r = (min(size.width, size.height) - stroke) / 2f
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val topLeft = Offset(cx - r, cy - r)
+        val arcSize = Size(r * 2f, r * 2f)
+        val start = 135f
+        val total = 270f
+        val frac = percent.coerceIn(0, 100) / 100f
+
+        drawArc(color.copy(alpha = 0.18f), start, total, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+        drawArc(color, start, total * frac, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+
+        val ang = (start + total * frac) * (PI / 180.0)
+        val dot = Offset(cx + r * cos(ang).toFloat(), cy + r * sin(ang).toFloat())
+        drawCircle(Color.White, stroke * 0.72f, dot)
+        drawCircle(color, stroke * 0.40f, dot)
     }
 }
