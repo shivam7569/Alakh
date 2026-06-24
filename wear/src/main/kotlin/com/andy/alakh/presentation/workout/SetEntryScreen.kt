@@ -58,6 +58,12 @@ private const val MAX_REPS_INDEX = 60
  */
 @Composable
 fun SetEntryScreen() {
+    // Same swipe-to-monitor pager as the workout list: form on the left, live monitor on the right.
+    PagerWithMonitor { SetEntryForm() }
+}
+
+@Composable
+private fun SetEntryForm() {
     val index = ActiveWorkout.editingIndex
     val draftExercise = ActiveWorkout.exerciseAt(index)
     val last = ActiveWorkout.lastSet(index)

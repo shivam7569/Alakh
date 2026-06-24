@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,8 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.foundation.pager.HorizontalPager
-import androidx.wear.compose.foundation.pager.rememberPagerState
 import com.andy.alakh.health.UserProfile
 import com.andy.alakh.health.WorkoutSensors
 import com.andy.alakh.shared.data.WorkoutRepository
@@ -98,11 +95,8 @@ fun WorkoutScreen(
         return
     }
 
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    Box(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-            if (page == 0) {
-                ExercisesPage(
+    PagerWithMonitor {
+        ExercisesPage(
                 session = current,
                 restRemaining = restRemaining,
                 onRestAdjust = { delta ->
@@ -127,30 +121,7 @@ fun WorkoutScreen(
                     ActiveWorkout.finish()
                     onFinished()
                 },
-            )
-            } else {
-                WorkoutMonitorScreen()
-            }
-        }
-        PageDots(
-            count = 2,
-            current = pagerState.currentPage,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
         )
-    }
-}
-
-/** Subtle pager dots: the current page filled, others a hollow circle (a page sits to the right). */
-@Composable
-private fun PageDots(count: Int, current: Int, modifier: Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-        repeat(count) { i ->
-            if (i == current) {
-                Box(Modifier.size(6.dp).background(Color.White, CircleShape))
-            } else {
-                Box(Modifier.size(6.dp).border(1.dp, Color(0x80FFFFFF), CircleShape))
-            }
-        }
     }
 }
 
