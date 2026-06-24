@@ -15,4 +15,5 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     val metrics = repository.metrics
     val status = repository.status
+    val diagnostic = repository.diagnostic
 }

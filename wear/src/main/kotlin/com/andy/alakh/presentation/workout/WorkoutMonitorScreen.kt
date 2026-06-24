@@ -1,5 +1,7 @@
 package com.andy.alakh.presentation.workout
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -24,10 +28,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
+import com.andy.alakh.health.PermissionHelper
 import com.andy.alakh.health.UserProfile
+import com.andy.alakh.health.WorkoutSensors
 import com.andy.alakh.shared.rules.HealthRules
 import com.andy.alakh.shared.rules.HealthRules.HeartRateZone
 
@@ -61,13 +68,26 @@ private fun fmtTime(elapsedMs: Long): String {
 fun WorkoutMonitorScreen() {
     val vm: WorkoutViewModel = viewModel()
     val metrics by vm.metrics.collectAsStateWithLifecycle()
+    val diagnostic by vm.diagnostic.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val maxHr = remember { UserProfile.maxHeartRate(context) }
+
+    var sensorsMissing by remember { mutableStateOf(PermissionHelper.missingSensorPermissions(context).isNotEmpty()) }
+    val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        sensorsMissing = PermissionHelper.missingSensorPermissions(context).isNotEmpty()
+        WorkoutSensors.start(context) // (re)start tracking now that the sensor permission may be granted
+    }
 
     val hr = metrics.heartRateBpm
     val zone = hr?.let { HealthRules.zoneForMaxHeartRate(it, maxHr) }
     val pct = hr?.let { HealthRules.heartRatePercent(it, maxHr) } ?: 0
     val accent = zone?.let { zoneColor(it) } ?: Muted
+
+    val statusText = when {
+        zone != null -> zoneLabel(zone)
+        sensorsMissing -> "Heart-rate permission needed"
+        else -> diagnostic ?: "Waiting for heart rate…"
+    }
 
     ScreenScaffold {
         Column(
@@ -91,15 +111,22 @@ fun WorkoutMonitorScreen() {
             }
 
             Text(
-                zone?.let { zoneLabel(it) } ?: "Waiting for heart rate…",
+                statusText,
                 fontSize = 12.sp,
                 color = accent,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Stat("${metrics.calories?.toInt() ?: 0}", "kcal")
                 Stat(if (hr != null) "$pct%" else "—", "of max")
+            }
+
+            if (sensorsMissing) {
+                Button(onClick = { permLauncher.launch(PermissionHelper.SENSOR_PERMISSIONS.toTypedArray()) }) {
+                    Text("Grant sensors", fontSize = 13.sp)
+                }
             }
         }
     }
