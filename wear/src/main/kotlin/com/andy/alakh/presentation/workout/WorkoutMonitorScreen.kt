@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,10 +43,9 @@ import androidx.wear.compose.material3.dynamicColorScheme
 import com.andy.alakh.health.PermissionHelper
 import com.andy.alakh.health.UserProfile
 import com.andy.alakh.health.WorkoutSensors
-import com.andy.alakh.shared.rules.HealthRules
+import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -55,9 +56,6 @@ private val ZoneText = Color(0xFFE6E6EE)
 private val ZoneColors = listOf(Color(0xFF36D0C8), Color(0xFF46C66E), Color(0xFFE8A93D), Color(0xFFE0573E))
 private val ZoneNames = listOf("Light", "Fat burn", "Cardio", "Peak")
 
-/** Which of the 4 gauge zones the value sits in (0–3), from the gauge fraction. */
-private fun gaugeZone(frac: Float): Int = (frac * 4f).toInt().coerceIn(0, 3)
-
 private fun fmtTime(elapsedMs: Long): String {
     val total = (elapsedMs / 1000).toInt()
     return "%d:%02d".format(total / 60, total % 60)
@@ -65,14 +63,15 @@ private fun fmtTime(elapsedMs: Long): String {
 
 /**
  * Live workout monitor, matched to the watch's native HR screen: a ring of FOUR zone segments
- * (lavender track) that fill up to a white dot in the CURRENT zone's color, with a heart in the
- * center that takes the same zone color, plus the BPM, zone name, and labeled calories + time.
+ * (lavender track) that fill up to a white dot in the CURRENT zone's color, with a center heart in
+ * the same color, the BPM, zone name, and labeled calories + time. Sized to fit the round screen.
  */
 @Composable
 fun WorkoutMonitorScreen() {
     val vm: WorkoutViewModel = viewModel()
     val metrics by vm.metrics.collectAsStateWithLifecycle()
     val diagnostic by vm.diagnostic.collectAsStateWithLifecycle()
+    val draft by ActiveWorkout.draft.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val maxHr = remember { UserProfile.maxHeartRate(context) }
     val track = dynamicColorScheme(context)?.primary ?: MaterialTheme.colorScheme.primary // lavender system theme
@@ -83,49 +82,61 @@ fun WorkoutMonitorScreen() {
         WorkoutSensors.start(context)
     }
 
+    // Elapsed time from the workout's start (Health Services' checkpoint is unreliable for this).
+    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { delay(1000); nowMs = System.currentTimeMillis() } }
+    val startedAt = draft?.startedAtEpochMs
+    val elapsedMs = if (startedAt != null) (nowMs - startedAt).coerceAtLeast(0L) else 0L
+
     val hr = metrics.heartRateBpm
-    val pct = hr?.let { HealthRules.heartRatePercent(it, maxHr) } ?: 0
-    // Gauge spans ~40%→100% of max HR (≈ Light / Fat burn / Cardio / Peak), so resting sits near the start.
-    val frac = if (hr != null) ((pct - 40f) / 60f).coerceIn(0f, 1f) else 0f
-    val zone = gaugeZone(frac)
-    val zoneColor = if (hr != null) ZoneColors[zone] else Muted
+    // Zone boundaries (bpm): floor 50, then 50% / 70% / 85% of max HR — the four zone segments.
+    val bounds = floatArrayOf(50f, maxHr * 0.50f, maxHr * 0.70f, maxHr * 0.85f, maxHr.toFloat())
+    var zoneIdx = 0
+    var within = 0f
+    if (hr != null) {
+        val bpm = hr.toFloat().coerceIn(bounds[0], bounds[4])
+        zoneIdx = 3
+        for (i in 0 until 4) if (bpm < bounds[i + 1]) { zoneIdx = i; break }
+        within = ((bpm - bounds[zoneIdx]) / (bounds[zoneIdx + 1] - bounds[zoneIdx])).coerceIn(0f, 1f)
+    }
+    val zoneColor = if (hr != null) ZoneColors[zoneIdx] else Muted
 
     val subline = when {
-        hr != null -> "${ZoneNames[zone]} zone"
+        hr != null -> "${ZoneNames[zoneIdx]} zone"
         bodySensorsMissing -> "Body Sensors needed"
         else -> diagnostic ?: "Waiting for heart rate…"
     }
 
     ScreenScaffold {
         Column(
-            modifier = Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 16.dp),
+            modifier = Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                ZoneGauge(frac = frac, active = zoneColor, track = track, hasValue = hr != null, modifier = Modifier.size(76.dp))
+                ZoneGauge(zoneIndex = zoneIdx, within = within, active = zoneColor, track = track, hasValue = hr != null, modifier = Modifier.size(62.dp))
             }
-            Text("Heart rate", fontSize = 13.sp, color = track)
+            Text("Heart rate", fontSize = 12.sp, color = track)
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(hr?.toString() ?: "—", fontSize = 46.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                Text(" bpm", fontSize = 16.sp, color = Muted, modifier = Modifier.padding(bottom = 8.dp))
+                Text(hr?.toString() ?: "—", fontSize = 36.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Text(" bpm", fontSize = 14.sp, color = Muted, modifier = Modifier.padding(bottom = 6.dp))
             }
             Text(
                 subline,
                 modifier = Modifier.fillMaxWidth(),
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 color = ZoneText,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 StatMini("${metrics.calories?.toInt() ?: 0}", "kcal")
-                StatMini(fmtTime(metrics.elapsedMs), "time")
+                StatMini(fmtTime(elapsedMs), "time")
             }
             if (bodySensorsMissing) {
                 Button(onClick = { permLauncher.launch(PermissionHelper.SENSOR_PERMISSIONS.toTypedArray()) }) {
-                    Text("Grant sensors", fontSize = 13.sp)
+                    Text("Grant sensors", fontSize = 12.sp)
                 }
             }
         }
@@ -135,21 +146,21 @@ fun WorkoutMonitorScreen() {
 @Composable
 private fun StatMini(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Text(label, fontSize = 9.sp, color = Muted)
     }
 }
 
 /**
- * The native-style HR gauge: a ~320° ring split into FOUR zone segments (gaps between). Each segment
- * is dim [track] where the value hasn't reached, and filled in the current zone's [active] color up
- * to the white dot. The outline heart in the center takes the same [active] color. No overlapping
- * layers — filled and unfilled portions are distinct, non-overlapping arc ranges.
+ * The native-style HR gauge: a ~320° ring of FOUR zone segments (wide gaps between). The dot sits in
+ * segment [zoneIndex] at fraction [within]; segments up to it fill in the current zone's [active]
+ * color, the rest stay dim [track]. The center outline heart takes the same color. Filled/unfilled
+ * are distinct, non-overlapping arc ranges.
  */
 @Composable
-private fun ZoneGauge(frac: Float, active: Color, track: Color, hasValue: Boolean, modifier: Modifier) {
+private fun ZoneGauge(zoneIndex: Int, within: Float, active: Color, track: Color, hasValue: Boolean, modifier: Modifier) {
     Canvas(modifier = modifier) {
-        val stroke = 6.dp.toPx()
+        val stroke = 5.5f.dp.toPx()
         val r = (min(size.width, size.height) - stroke) / 2f
         val cx = size.width / 2f
         val cy = size.height / 2f
@@ -160,18 +171,18 @@ private fun ZoneGauge(frac: Float, active: Color, track: Color, hasValue: Boolea
         val totalDeg = 320f
         val gap = 24f // wide enough that the rounded caps don't swallow it
         val seg = (totalDeg - 3f * gap) / 4f
-        val dotDeg = startDeg + totalDeg * frac.coerceIn(0f, 1f)
+        val dotDeg = startDeg + zoneIndex * (seg + gap) + within.coerceIn(0f, 1f) * seg
         val dim = track.copy(alpha = 0.5f)
 
         for (i in 0 until 4) {
             val s0 = startDeg + i * (seg + gap)
             val s1 = s0 + seg
-            if (hasValue && dotDeg > s0) { // filled portion of this segment
+            if (hasValue && dotDeg > s0) {
                 val end = min(s1, dotDeg)
                 drawArc(active, s0, end - s0, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
             }
-            if (!hasValue || dotDeg < s1) { // unfilled (dim) portion
-                val st = max(s0, dotDeg)
+            if (!hasValue || dotDeg < s1) {
+                val st = if (dotDeg > s0) dotDeg else s0
                 drawArc(dim, st, s1 - st, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
             }
         }
@@ -179,11 +190,10 @@ private fun ZoneGauge(frac: Float, active: Color, track: Color, hasValue: Boolea
         if (hasValue) {
             val ang = dotDeg * (PI / 180.0)
             val dot = Offset(cx + r * cos(ang).toFloat(), cy + r * sin(ang).toFloat())
-            drawCircle(Color.White, stroke * 0.82f, dot)
-            drawCircle(active, stroke * 0.42f, dot)
+            drawCircle(Color.White, stroke * 0.85f, dot)
+            drawCircle(active, stroke * 0.45f, dot)
         }
 
-        // Outline heart in the center, in the current zone color.
         val hs = r * 0.5f
         val heart = Path().apply {
             moveTo(cx, cy - hs * 0.25f)
