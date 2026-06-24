@@ -87,16 +87,12 @@ fun WorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             ) {
                 Text("Workout", style = MaterialTheme.typography.titleMedium)
-                Button(
-                    onClick = onFromRoutine,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 7.dp),
-                ) { Text("From routine", maxLines = 1, fontSize = 14.sp) }
-                Button(
-                    onClick = onStartAdHoc,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 7.dp),
-                ) { Text("Add exercises", maxLines = 1, fontSize = 14.sp) }
+                Button(onClick = onFromRoutine, modifier = Modifier.fillMaxWidth()) {
+                    Text("From routine", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
+                }
+                Button(onClick = onStartAdHoc, modifier = Modifier.fillMaxWidth()) {
+                    Text("Add exercises", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
+                }
             }
         }
         return

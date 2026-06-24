@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,6 +39,7 @@ import androidx.wear.compose.material3.PickerState
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.rememberPickerState
+import com.andy.alakh.presentation.components.BodyHeatmap
 import com.andy.alakh.presentation.components.TickButton
 import com.andy.alakh.shared.model.SetType
 import kotlin.math.roundToInt
@@ -101,6 +103,15 @@ fun SetEntryScreen() {
                 )
             } else if (last != null) {
                 Text("prev  ${fmt(last.weightKg)} kg × ${last.reps ?: 0}", fontSize = 11.sp, color = Muted)
+            }
+
+            // Anatomical diagram of the muscles this exercise targets (same map as the catalog).
+            draftExercise?.let { ex ->
+                BodyHeatmap(
+                    primary = ex.primaryMuscles.toSet(),
+                    secondary = ex.secondaryMuscles.toSet(),
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                )
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
