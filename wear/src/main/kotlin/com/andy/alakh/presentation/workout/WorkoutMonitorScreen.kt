@@ -158,7 +158,7 @@ private fun ZoneGauge(frac: Float, active: Color, track: Color, hasValue: Boolea
 
         val startDeg = 110f
         val totalDeg = 320f
-        val gap = 8f
+        val gap = 24f // wide enough that the rounded caps don't swallow it
         val seg = (totalDeg - 3f * gap) / 4f
         val dotDeg = startDeg + totalDeg * frac.coerceIn(0f, 1f)
         val dim = track.copy(alpha = 0.5f)
