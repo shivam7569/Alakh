@@ -46,6 +46,9 @@ object ActiveWorkout {
     /** Which exercise the set-entry screen is currently logging into. */
     var editingIndex: Int = -1
 
+    /** When >= 0, the next exercise picked replaces this index instead of being appended. */
+    var replacingIndex: Int = -1
+
     val isActive: Boolean get() = _draft.value != null
 
     fun startIfNeeded() {
@@ -63,6 +66,26 @@ object ActiveWorkout {
         )
         _draft.value = current.copy(exercises = current.exercises + draftExercise)
         return _draft.value!!.exercises.lastIndex
+    }
+
+    fun removeExercise(index: Int) {
+        val current = _draft.value ?: return
+        if (index !in current.exercises.indices) return
+        _draft.value = current.copy(exercises = current.exercises.filterIndexed { i, _ -> i != index })
+    }
+
+    /** Swap the exercise at [index] for [item], discarding its (now-mismatched) sets. */
+    fun replaceExercise(index: Int, item: ExerciseListItem) {
+        val current = _draft.value ?: return
+        if (index !in current.exercises.indices) return
+        val updated = current.exercises.toMutableList()
+        updated[index] = DraftExercise(
+            exerciseId = item.id,
+            name = item.name,
+            primaryMuscles = item.primaryMuscles,
+            secondaryMuscles = item.secondaryMuscles,
+        )
+        _draft.value = current.copy(exercises = updated)
     }
 
     fun logSet(exerciseIndex: Int, set: DraftSet) {

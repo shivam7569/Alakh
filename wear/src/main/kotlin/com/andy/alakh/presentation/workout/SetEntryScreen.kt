@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,6 +70,8 @@ fun SetEntryScreen(onLogged: () -> Unit) {
     )
     var rpe by remember { mutableStateOf(last?.rpe ?: 8.0) }
     var setType by remember { mutableStateOf(last?.setType ?: SetType.NORMAL) }
+    var loggedCount by remember { mutableIntStateOf(0) }
+    var lastLogged by remember { mutableStateOf(last) }
 
     val weightFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { weightFocus.requestFocus() } }
@@ -90,7 +93,13 @@ fun SetEntryScreen(onLogged: () -> Unit) {
                 textAlign = TextAlign.Center,
                 maxLines = 2,
             )
-            if (last != null) {
+            if (loggedCount > 0) {
+                Text(
+                    "✓ $loggedCount logged · ${fmt(lastLogged?.weightKg)} kg × ${lastLogged?.reps ?: 0}",
+                    fontSize = 11.sp,
+                    color = Accent,
+                )
+            } else if (last != null) {
                 Text("prev  ${fmt(last.weightKg)} kg × ${last.reps ?: 0}", fontSize = 11.sp, color = Muted)
             }
 
@@ -108,23 +117,30 @@ fun SetEntryScreen(onLogged: () -> Unit) {
             }
 
             Spacer(Modifier.height(2.dp))
+            // Tick logs the set and STAYS (pre-filled for the next set) — log set after set without
+            // re-opening the exercise. "Done" returns to the workout.
             TickButton(
                 onClick = {
                     if (index >= 0) {
-                        ActiveWorkout.logSet(
-                            index,
-                            DraftSet(
-                                setType = setType,
-                                weightKg = weightState.selectedOptionIndex * WEIGHT_STEP,
-                                reps = repsState.selectedOptionIndex,
-                                rpe = rpe,
-                            ),
+                        val set = DraftSet(
+                            setType = setType,
+                            weightKg = weightState.selectedOptionIndex * WEIGHT_STEP,
+                            reps = repsState.selectedOptionIndex,
+                            rpe = rpe,
                         )
+                        ActiveWorkout.logSet(index, set)
                         RestTimer.start() // auto-start the rest countdown after logging a set
+                        lastLogged = set
+                        loggedCount++
                     }
-                    onLogged()
                 },
                 diameter = 50.dp,
+            )
+            Text(
+                "Done",
+                color = Accent,
+                fontSize = 14.sp,
+                modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable { onLogged() }.padding(horizontal = 18.dp, vertical = 6.dp),
             )
         }
     }

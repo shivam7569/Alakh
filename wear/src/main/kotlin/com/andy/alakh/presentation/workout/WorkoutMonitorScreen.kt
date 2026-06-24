@@ -52,13 +52,13 @@ private fun zoneColor(zone: HeartRateZone): Color = when (zone) {
     HeartRateZone.ZONE_5 -> Color(0xFFE0573E)
 }
 
-private fun zoneLabel(zone: HeartRateZone): String = when (zone) {
-    HeartRateZone.REST -> "REST"
-    HeartRateZone.ZONE_1 -> "ZONE 1 · warm up"
-    HeartRateZone.ZONE_2 -> "ZONE 2 · fat burn"
-    HeartRateZone.ZONE_3 -> "ZONE 3 · cardio"
-    HeartRateZone.ZONE_4 -> "ZONE 4 · hard"
-    HeartRateZone.ZONE_5 -> "ZONE 5 · peak"
+private fun zoneName(zone: HeartRateZone): String = when (zone) {
+    HeartRateZone.REST -> "Resting"
+    HeartRateZone.ZONE_1 -> "Warm-up zone"
+    HeartRateZone.ZONE_2 -> "Light zone"
+    HeartRateZone.ZONE_3 -> "Cardio zone"
+    HeartRateZone.ZONE_4 -> "Hard zone"
+    HeartRateZone.ZONE_5 -> "Peak zone"
 }
 
 private fun fmtTime(elapsedMs: Long): String {
@@ -66,7 +66,10 @@ private fun fmtTime(elapsedMs: Long): String {
     return "%d:%02d".format(total / 60, total % 60)
 }
 
-/** Full-screen live workout monitor: HR + zone ring, calories, and elapsed time. */
+/**
+ * Live workout monitor, styled after the watch's native heart-rate screen: a small zone ring with a
+ * heart glyph, the "Heart rate" label, the big BPM value, the zone name, and a calories + time footer.
+ */
 @Composable
 fun WorkoutMonitorScreen() {
     val vm: WorkoutViewModel = viewModel()
@@ -78,7 +81,7 @@ fun WorkoutMonitorScreen() {
     var bodySensorsMissing by remember { mutableStateOf(PermissionHelper.missingBodySensors(context)) }
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         bodySensorsMissing = PermissionHelper.missingBodySensors(context)
-        WorkoutSensors.start(context) // (re)start tracking now that the sensor permission may be granted
+        WorkoutSensors.start(context)
     }
 
     val hr = metrics.heartRateBpm
@@ -86,49 +89,42 @@ fun WorkoutMonitorScreen() {
     val pct = hr?.let { HealthRules.heartRatePercent(it, maxHr) } ?: 0
     val accent = zone?.let { zoneColor(it) } ?: Muted
 
-    val statusText = when {
-        zone != null -> zoneLabel(zone)
-        bodySensorsMissing -> "Body Sensors permission needed"
+    // Below the BPM: the zone name when we have HR, otherwise a short status (no raw error text).
+    val subline = when {
+        zone != null -> zoneName(zone)
+        bodySensorsMissing -> "Body Sensors needed"
         else -> diagnostic ?: "Waiting for heart rate…"
     }
 
     ScreenScaffold {
         Column(
-            modifier = Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 22.dp),
+            modifier = Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
         ) {
-            Text(fmtTime(metrics.elapsedMs), style = MaterialTheme.typography.bodySmall, color = Muted)
-
             Box(contentAlignment = Alignment.Center) {
-                ZoneRing(percent = pct, color = accent, modifier = Modifier.size(116.dp))
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        hr?.toString() ?: "—",
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                    )
-                    Text("BPM", fontSize = 11.sp, color = Muted, letterSpacing = 2.sp)
-                }
+                ZoneRing(percent = pct, color = accent, modifier = Modifier.size(60.dp))
+                Text("♥", color = accent, fontSize = 18.sp)
             }
-
+            Text("Heart rate", fontSize = 13.sp, color = Color(0xFFB9A7E8))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(hr?.toString() ?: "—", fontSize = 46.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Text(" bpm", fontSize = 16.sp, color = Muted, modifier = Modifier.padding(bottom = 8.dp))
+            }
             Text(
-                statusText,
+                subline,
                 modifier = Modifier.fillMaxWidth(),
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = accent,
-                fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Stat("${metrics.calories?.toInt() ?: 0}", "kcal")
-                Stat(if (hr != null) "$pct%" else "—", "of max")
-            }
-
+            Text(
+                "${metrics.calories?.toInt() ?: 0} kcal  ·  ${fmtTime(metrics.elapsedMs)}",
+                fontSize = 12.sp,
+                color = Muted,
+            )
             if (bodySensorsMissing) {
                 Button(onClick = { permLauncher.launch(PermissionHelper.SENSOR_PERMISSIONS.toTypedArray()) }) {
                     Text("Grant sensors", fontSize = 13.sp)
@@ -138,39 +134,23 @@ fun WorkoutMonitorScreen() {
     }
 }
 
-@Composable
-private fun Stat(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-        Text(label, fontSize = 10.sp, color = Muted)
-    }
-}
-
 /** A circular gauge filled to [percent] of max HR, colored by the current zone. */
 @Composable
 private fun ZoneRing(percent: Int, color: Color, modifier: Modifier) {
     Canvas(modifier = modifier) {
-        val stroke = 7.dp.toPx()
+        val stroke = 5.dp.toPx()
         val inset = stroke / 2f
         val arcSize = Size(size.width - stroke, size.height - stroke)
         val topLeft = Offset(inset, inset)
         drawArc(
             color = color.copy(alpha = 0.18f),
-            startAngle = 0f,
-            sweepAngle = 360f,
-            useCenter = false,
-            topLeft = topLeft,
-            size = arcSize,
-            style = Stroke(width = stroke),
+            startAngle = 0f, sweepAngle = 360f, useCenter = false,
+            topLeft = topLeft, size = arcSize, style = Stroke(width = stroke),
         )
         drawArc(
             color = color,
-            startAngle = -90f,
-            sweepAngle = 360f * (percent.coerceIn(0, 100) / 100f),
-            useCenter = false,
-            topLeft = topLeft,
-            size = arcSize,
-            style = Stroke(width = stroke, cap = StrokeCap.Round),
+            startAngle = -90f, sweepAngle = 360f * (percent.coerceIn(0, 100) / 100f), useCenter = false,
+            topLeft = topLeft, size = arcSize, style = Stroke(width = stroke, cap = StrokeCap.Round),
         )
     }
 }

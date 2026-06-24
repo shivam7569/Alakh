@@ -25,7 +25,6 @@ import com.andy.alakh.presentation.theme.AlakhTheme
 import com.andy.alakh.presentation.workout.ActiveWorkout
 import com.andy.alakh.presentation.workout.RoutinesScreen
 import com.andy.alakh.presentation.workout.SetEntryScreen
-import com.andy.alakh.presentation.workout.WorkoutMonitorScreen
 import com.andy.alakh.presentation.workout.WorkoutScreen
 import com.andy.alakh.shared.data.ExerciseListItem
 import com.andy.alakh.shared.model.MuscleGroup
@@ -40,7 +39,6 @@ object Routes {
     const val BREATHING_RUN = "breathing_run"
     const val WORKOUT = "workout"
     const val ROUTINES = "routines"
-    const val WORKOUT_MONITOR = "workout_monitor"
     const val WORKOUT_PICK = "workout_pick"
     const val SET_ENTRY = "set_entry"
     const val EXERCISES = "exercises"
@@ -74,6 +72,20 @@ fun AlakhApp() {
             } else {
                 sensorPermLauncher.launch(missing.toTypedArray())
             }
+        }
+        // Picking an exercise either replaces the one being replaced or appends a new one, then
+        // opens set entry for it.
+        val pickExercise: (ExerciseListItem) -> Unit = { exercise ->
+            val replacing = ActiveWorkout.replacingIndex
+            val index = if (replacing >= 0) {
+                ActiveWorkout.replaceExercise(replacing, exercise)
+                ActiveWorkout.replacingIndex = -1
+                replacing
+            } else {
+                ActiveWorkout.addExercise(exercise)
+            }
+            ActiveWorkout.editingIndex = index
+            navController.navigate(Routes.SET_ENTRY) { popUpTo(Routes.WORKOUT_PICK) { inclusive = true } }
         }
 
         AppScaffold {
@@ -130,19 +142,13 @@ fun AlakhApp() {
                 }
                 composable(Routes.EXERCISE_DETAIL) { ExerciseDetailScreen() }
                 composable(Routes.MUSCLE_EXERCISES) {
-                    val pick: (ExerciseListItem) -> Unit = { ex ->
-                        ActiveWorkout.editingIndex = ActiveWorkout.addExercise(ex)
-                        navController.navigate(Routes.SET_ENTRY) {
-                            popUpTo(Routes.WORKOUT_PICK) { inclusive = true }
-                        }
-                    }
                     val browse: (ExerciseListItem) -> Unit = { ex ->
                         ExerciseDetailHolder.item = ex
                         navController.navigate(Routes.EXERCISE_DETAIL)
                     }
                     MuscleExercisesScreen(
                         group = CatalogNav.group ?: MuscleGroup.CHEST,
-                        onSelectExercise = if (CatalogNav.picking) pick else browse,
+                        onSelectExercise = if (CatalogNav.picking) pickExercise else browse,
                     )
                 }
                 composable(Routes.WORKOUT) {
@@ -154,14 +160,16 @@ fun AlakhApp() {
                             ActiveWorkout.editingIndex = index
                             navController.navigate(Routes.SET_ENTRY)
                         },
-                        onOpenMonitor = { navController.navigate(Routes.WORKOUT_MONITOR) },
+                        onReplaceExercise = { index ->
+                            ActiveWorkout.replacingIndex = index
+                            navController.navigate(Routes.WORKOUT_PICK)
+                        },
                         onFinished = { navController.popBackStack(Routes.HOME, false) },
                     )
                 }
                 composable(Routes.ROUTINES) {
                     RoutinesScreen(onAddExercises = beginWorkout)
                 }
-                composable(Routes.WORKOUT_MONITOR) { WorkoutMonitorScreen() }
                 composable(Routes.WORKOUT_PICK) {
                     ExercisesScreen(
                         onOpenGroup = { g ->
@@ -169,12 +177,7 @@ fun AlakhApp() {
                             CatalogNav.picking = true
                             navController.navigate(Routes.MUSCLE_EXERCISES)
                         },
-                        onSelectExercise = { exercise ->
-                            ActiveWorkout.editingIndex = ActiveWorkout.addExercise(exercise)
-                            navController.navigate(Routes.SET_ENTRY) {
-                                popUpTo(Routes.WORKOUT_PICK) { inclusive = true }
-                            }
-                        },
+                        onSelectExercise = pickExercise,
                     )
                 }
                 composable(Routes.SET_ENTRY) {
