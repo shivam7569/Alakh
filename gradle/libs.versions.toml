@@ -27,6 +27,7 @@ truth = "1.4.4"
 robolectric = "4.14.1"
 coroutinesTest = "1.9.0"
 androidxTest = "1.6.1"
+kotlinxSerialization = "1.7.3"
 
 [libraries]
 # --- Compose (versions managed by the BOM) ---
@@ -50,8 +51,11 @@ androidx-wear-ongoing = { group = "androidx.wear", name = "wear-ongoing", versio
 # --- Health Services (active workout tracking on the watch) ---
 androidx-health-services = { group = "androidx.health", name = "health-services-client", version.ref = "healthServices" }
 
-# --- Wear OS Data Layer (phone <-> watch, used later) ---
+# --- Wear OS Data Layer (phone <-> watch) ---
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
+
+# --- Serialization (routine/session JSON sent over the Data Layer; pure-Kotlin in :core) ---
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
 # --- Room (on-device persistence, in :shared) ---
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -83,4 +87,5 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 # Pure-JVM Kotlin plugin for the :core module (non-Android, so it needs an explicit Kotlin version).
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

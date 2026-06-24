@@ -1,15 +1,20 @@
 package com.andy.alakh.shared.model
 
+import kotlinx.serialization.Serializable
+
 /** How a single set counts. (Requirement: normal / warm-up / failure / drop.) */
+@Serializable
 enum class SetType { NORMAL, WARMUP, FAILURE, DROP }
 
 /** Whether an exercise within a session is real work or a warm-up movement. (Requirement.) */
+@Serializable
 enum class ExerciseRole { NORMAL, WARMUP }
 
 /**
  * One performed set. Fields are nullable because what matters depends on the exercise's
  * TrackedMetric — a plank has a duration but no weight; a back squat has weight + reps.
  */
+@Serializable
 data class LoggedSet(
     val setType: SetType = SetType.NORMAL,
     val weightKg: Double? = null,
@@ -25,6 +30,7 @@ data class LoggedSet(
 }
 
 /** A planned target set from a routine, used to pre-fill the watch logger ("accept or nudge"). */
+@Serializable
 data class PlannedSet(
     val setType: SetType = SetType.NORMAL,
     val targetReps: Int? = null,

@@ -4,9 +4,12 @@
 // published to the public SDK repo CI runners use, so they can't be built on CI yet.)
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 dependencies {
+    implementation(libs.kotlinx.serialization.json)
+
     testImplementation(libs.junit)
     testImplementation(libs.truth)
 }

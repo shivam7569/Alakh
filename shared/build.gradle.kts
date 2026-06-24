@@ -30,6 +30,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // Wear Data Layer (routine/session sync between phone and watch — used by both app modules).
+    implementation(libs.play.services.wearable)
+
     testImplementation(libs.junit)
     testImplementation(libs.truth)
 }
