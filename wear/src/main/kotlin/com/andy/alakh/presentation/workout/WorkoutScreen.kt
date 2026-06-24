@@ -80,18 +80,17 @@ fun WorkoutScreen(
     if (current == null) {
         ScreenScaffold {
             Column(
-                modifier = Modifier.fillMaxSize().padding(20.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             ) {
                 Text("Workout", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Start from a routine or build one on your wrist",
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                )
-                Button(onClick = onFromRoutine, modifier = Modifier.fillMaxWidth()) { Text("From routine") }
-                Button(onClick = onStartAdHoc, modifier = Modifier.fillMaxWidth()) { Text("Add exercises") }
+                Button(onClick = onFromRoutine, modifier = Modifier.fillMaxWidth()) {
+                    Text("From routine", maxLines = 1)
+                }
+                Button(onClick = onStartAdHoc, modifier = Modifier.fillMaxWidth()) {
+                    Text("Add exercises", maxLines = 1)
+                }
             }
         }
         return

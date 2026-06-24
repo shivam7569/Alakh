@@ -55,7 +55,7 @@ private const val MAX_REPS_INDEX = 60
  * tick logs the set.
  */
 @Composable
-fun SetEntryScreen(onLogged: () -> Unit) {
+fun SetEntryScreen() {
     val index = ActiveWorkout.editingIndex
     val draftExercise = ActiveWorkout.exerciseAt(index)
     val last = ActiveWorkout.lastSet(index)
@@ -118,7 +118,7 @@ fun SetEntryScreen(onLogged: () -> Unit) {
 
             Spacer(Modifier.height(2.dp))
             // Tick logs the set and STAYS (pre-filled for the next set) — log set after set without
-            // re-opening the exercise. "Done" returns to the workout.
+            // re-opening the exercise. Swipe back when done with this exercise.
             TickButton(
                 onClick = {
                     if (index >= 0) {
@@ -135,12 +135,6 @@ fun SetEntryScreen(onLogged: () -> Unit) {
                     }
                 },
                 diameter = 50.dp,
-            )
-            Text(
-                "Done",
-                color = Accent,
-                fontSize = 14.sp,
-                modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable { onLogged() }.padding(horizontal = 18.dp, vertical = 6.dp),
             )
         }
     }

@@ -180,9 +180,7 @@ fun AlakhApp() {
                         onSelectExercise = pickExercise,
                     )
                 }
-                composable(Routes.SET_ENTRY) {
-                    SetEntryScreen(onLogged = { navController.popBackStack() })
-                }
+                composable(Routes.SET_ENTRY) { SetEntryScreen() }
             }
         }
     }
