@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.andy.alakh.health.UserProfile
 import com.andy.alakh.health.WorkoutSensors
 import com.andy.alakh.shared.data.WorkoutRepository
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,8 @@ fun WorkoutScreen(
         if (restRemaining == 0 && wasResting) vibrate(context)
         wasResting = restRemaining > 0
     }
+    // Load the saved preferred rest length once.
+    LaunchedEffect(Unit) { RestTimer.setDefaultDuration(UserProfile.restDurationSec(context)) }
 
     ScreenScaffold {
         val current = session
@@ -92,7 +95,16 @@ fun WorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 if (restRemaining > 0) {
-                    item(key = "rest") { RestBanner(restRemaining) }
+                    item(key = "rest") {
+                        RestBanner(
+                            remaining = restRemaining,
+                            onAdjust = { delta ->
+                                RestTimer.addTime(delta)
+                                UserProfile.setRestDurationSec(context, RestTimer.durationSec)
+                            },
+                            onSkip = { RestTimer.skip() },
+                        )
+                    }
                 }
                 item {
                     Text(
@@ -149,18 +161,19 @@ fun WorkoutScreen(
 }
 
 @Composable
-private fun RestBanner(remaining: Int) {
+private fun RestBanner(remaining: Int, onAdjust: (Int) -> Unit, onSkip: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(Color(0x2234C796))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Rest ${fmtClock(remaining)}", color = Accent, modifier = Modifier.weight(1f))
-        Chip("+15") { RestTimer.addTime(15) }
-        Chip("Skip") { RestTimer.skip() }
+        Chip("−15") { onAdjust(-15) }
+        Chip("+15") { onAdjust(15) }
+        Chip("Skip") { onSkip() }
     }
 }
 

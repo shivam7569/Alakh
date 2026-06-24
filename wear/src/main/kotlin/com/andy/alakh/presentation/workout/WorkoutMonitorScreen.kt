@@ -72,9 +72,9 @@ fun WorkoutMonitorScreen() {
     val context = LocalContext.current
     val maxHr = remember { UserProfile.maxHeartRate(context) }
 
-    var sensorsMissing by remember { mutableStateOf(PermissionHelper.missingSensorPermissions(context).isNotEmpty()) }
+    var bodySensorsMissing by remember { mutableStateOf(PermissionHelper.missingBodySensors(context)) }
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        sensorsMissing = PermissionHelper.missingSensorPermissions(context).isNotEmpty()
+        bodySensorsMissing = PermissionHelper.missingBodySensors(context)
         WorkoutSensors.start(context) // (re)start tracking now that the sensor permission may be granted
     }
 
@@ -85,7 +85,7 @@ fun WorkoutMonitorScreen() {
 
     val statusText = when {
         zone != null -> zoneLabel(zone)
-        sensorsMissing -> "Heart-rate permission needed"
+        bodySensorsMissing -> "Body Sensors permission needed"
         else -> diagnostic ?: "Waiting for heart rate…"
     }
 
@@ -123,7 +123,7 @@ fun WorkoutMonitorScreen() {
                 Stat(if (hr != null) "$pct%" else "—", "of max")
             }
 
-            if (sensorsMissing) {
+            if (bodySensorsMissing) {
                 Button(onClick = { permLauncher.launch(PermissionHelper.SENSOR_PERMISSIONS.toTypedArray()) }) {
                     Text("Grant sensors", fontSize = 13.sp)
                 }

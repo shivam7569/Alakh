@@ -32,6 +32,10 @@ object PermissionHelper {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
         }
 
+    /** Only BODY_SENSORS actually blocks heart rate (POST_NOTIFICATIONS is just for the FGS notice). */
+    fun missingBodySensors(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED
+
     fun hasWorkoutPermissions(context: Context): Boolean =
         missingPermissions(context).isEmpty()
 }

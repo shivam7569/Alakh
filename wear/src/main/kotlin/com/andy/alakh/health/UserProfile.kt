@@ -14,6 +14,7 @@ object UserProfile {
     private const val PREFS = "alakh_profile"
     private const val KEY_DOB_EPOCH_DAY = "dob_epoch_day"
     private const val KEY_MANUAL_MAX_HR = "manual_max_hr"
+    private const val KEY_REST_SEC = "rest_duration_sec"
     private val DEFAULT_DOB: LocalDate = LocalDate.of(1996, 2, 17)
 
     private fun prefs(context: Context) =
@@ -47,5 +48,12 @@ object UserProfile {
     fun maxHeartRate(context: Context): Int {
         val manual = manualMaxHr(context)
         return if (manual > 0) manual else HealthRules.maxHeartRate(currentAge(context))
+    }
+
+    /** Preferred rest length between sets (seconds), default 90; adjusted from the rest banner. */
+    fun restDurationSec(context: Context): Int = prefs(context).getInt(KEY_REST_SEC, 90)
+
+    fun setRestDurationSec(context: Context, seconds: Int) {
+        prefs(context).edit().putInt(KEY_REST_SEC, seconds.coerceIn(15, 600)).apply()
     }
 }

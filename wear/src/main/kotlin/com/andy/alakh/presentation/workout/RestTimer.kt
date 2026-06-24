@@ -21,12 +21,17 @@ object RestTimer {
     private val _remaining = MutableStateFlow(0)
     val remaining: StateFlow<Int> = _remaining.asStateFlow()
 
-    /** Last duration used, so "rest again" and the banner default stay consistent. */
+    /** The default rest length, also used as the banner default for the next set. */
     var durationSec = 90
         private set
 
+    /** Set the preferred default (e.g. loaded from saved settings) without starting a countdown. */
+    fun setDefaultDuration(seconds: Int) {
+        durationSec = seconds.coerceIn(15, 600)
+    }
+
     fun start(seconds: Int = durationSec) {
-        durationSec = seconds.coerceAtLeast(5)
+        durationSec = seconds.coerceIn(15, 600)
         job?.cancel()
         _remaining.value = durationSec
         job = scope.launch {
@@ -37,9 +42,13 @@ object RestTimer {
         }
     }
 
-    /** Nudge the running countdown (e.g. +15s / −15s); ignored when idle. */
+    /**
+     * Adjust rest length by ±15s. Changes BOTH the running countdown and the saved default, so
+     * "I want longer/shorter rests" sticks for every following set.
+     */
     fun addTime(deltaSec: Int) {
-        if (_remaining.value > 0) _remaining.value = (_remaining.value + deltaSec).coerceAtLeast(0)
+        durationSec = (durationSec + deltaSec).coerceIn(15, 600)
+        if (_remaining.value > 0) _remaining.value = (_remaining.value + deltaSec).coerceIn(1, 600)
     }
 
     fun skip() {
