@@ -1,23 +1,19 @@
 package com.andy.alakh.mobile
 
 import android.os.Bundle
-import android.view.Gravity
-import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import com.andy.alakh.mobile.ui.AlakhPhoneTheme
+import com.andy.alakh.mobile.ui.PhoneApp
 
-/**
- * Intentional stub. Its only job for now is to establish the phone-side package
- * (applicationId com.andy.alakh) so the watch and phone can pair over the Wear OS
- * Data Layer later. Build out the real companion UI here when you add phone sync.
- */
+/** The phone companion: plan routines, review history, and sync to Google Health. */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val view = TextView(this).apply {
-            text = "Alakh companion\n(coming soon)"
-            textSize = 20f
-            gravity = Gravity.CENTER
+        enableEdgeToEdge()
+        setContent {
+            AlakhPhoneTheme { PhoneApp() }
         }
-        setContentView(view)
     }
 }
