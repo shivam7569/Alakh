@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,9 +47,15 @@ fun HomeScreen(
                 letterSpacing = 2.sp,
             )
             Spacer(Modifier.height(2.dp))
-            Button(onClick = onWorkout, modifier = Modifier.fillMaxWidth()) { Text("Workout") }
-            Button(onClick = onBreathing, modifier = Modifier.fillMaxWidth()) { Text("Breathing") }
-            Button(onClick = onExercises, modifier = Modifier.fillMaxWidth()) { Text("Exercises") }
+            Button(onClick = onWorkout, modifier = Modifier.fillMaxWidth()) {
+                Text("Workout", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+            Button(onClick = onBreathing, modifier = Modifier.fillMaxWidth()) {
+                Text("Breathing", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+            Button(onClick = onExercises, modifier = Modifier.fillMaxWidth()) {
+                Text("Exercises", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
         }
     }
 }
